@@ -2,6 +2,8 @@
 
 **Web interface for CUPS**: a modern, lightweight, single-binary replacement for the legacy CUPS web interface (`localhost:631`) on macOS.
 
+![The CUPS webui dashboard in mock mode, showing the summary tiles and the printers and queues table](./docs/screenshot.png)
+
 Designed specifically to address UX barriers in macOS and UNIX environments:
 - **Zero Configuration Access**: Bypasses the requirement to run `cupsctl WebInterface=yes` in Terminal.
 - **Human-Centric UX**: Replaces technical abstractions (*PPDs*, *Classes*) with clear workflows (*Printers*, *Print Queues*, *Printer Pools*).
@@ -67,6 +69,8 @@ If you would like to build or modify the project yourself:
 ### Prerequisites
 - [Go](https://go.dev/) (1.26+)
 - [Node.js](https://nodejs.org/) (20+) and `npm`
+
+The Go code uses only the standard library, so `go.mod` lists no dependencies and there is no `go.sum` file.
 
 ### Build Steps
 ```bash
