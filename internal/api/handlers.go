@@ -327,7 +327,7 @@ func (s *Server) handleAddPrinter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !cups.IsValidPrinterURI(params.URI) {
-		writeError(w, http.StatusBadRequest, "invalid printer connection URI: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address without control characters or malformed %-escapes")
+		writeError(w, http.StatusBadRequest, "invalid printer connection URI: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address (or file:/dev/null for a null queue) without control characters or malformed %-escapes")
 		return
 	}
 
@@ -367,7 +367,7 @@ func (s *Server) handleModifyPrinter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if params.URI != "" && !cups.IsValidPrinterURI(params.URI) {
-		writeError(w, http.StatusBadRequest, "invalid printer connection URI: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address without control characters or malformed %-escapes")
+		writeError(w, http.StatusBadRequest, "invalid printer connection URI: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address (or file:/dev/null for a null queue) without control characters or malformed %-escapes")
 		return
 	}
 

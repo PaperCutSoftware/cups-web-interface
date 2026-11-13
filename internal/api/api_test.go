@@ -918,6 +918,27 @@ func TestSecurityQueueOverwriteAndValidation(t *testing.T) {
 		t.Fatalf("expected 400 Bad Request for file:// URI scheme, got %d", wBadURI.Code)
 	}
 
+	// 4b. The null device is the one accepted file: URI; look-alikes are rejected
+	for uri, wantOK := range map[string]bool{
+		"file:/dev/null":                  true,
+		"file:///dev/null":                true,
+		"file:/dev/null/../../etc/shadow": false,
+		"file:/dev/zero":                  false,
+	} {
+		body := `{"name":"Null_Queue_Test","description":"Null","uri":"` + uri + `"}`
+		req := newTestReq(srv, "POST", "/api/v1/printers", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, req)
+		if gotOK := w.Code >= 200 && w.Code < 300; gotOK != wantOK {
+			t.Fatalf("uri %q: got status %d, want success=%v", uri, w.Code, wantOK)
+		}
+		if wantOK {
+			del := newTestReq(srv, "DELETE", "/api/v1/printers/Null_Queue_Test", nil)
+			srv.Handler().ServeHTTP(httptest.NewRecorder(), del)
+		}
+	}
+
 	// 5. Arbitrary untrusted PPD file path (/tmp/evil.ppd)
 	badPPDBody := `{"name":"Test_Queue_PPD","description":"Exploit","uri":"socket://192.168.1.99:9100","ppd_path":"/tmp/malicious.ppd"}`
 	reqBadPPD := newTestReq(srv, "POST", "/api/v1/printers", strings.NewReader(badPPDBody))

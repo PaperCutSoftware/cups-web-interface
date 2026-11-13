@@ -63,6 +63,20 @@ func IsValidPrinterName(name string) bool {
 	return !strings.ContainsAny(name, printerNameForbiddenChars)
 }
 
+// nullDeviceURIs are the only file: device URIs accepted. CUPS discards every job
+// sent to /dev/null, which is how virtual "null" queues (e.g. Find-Me / hold-and-release
+// queues) are set up. No other file: path is allowed, because a file device lets
+// print jobs write to an arbitrary path.
+var nullDeviceURIs = map[string]bool{
+	"file:/dev/null":   true,
+	"file:///dev/null": true,
+}
+
+// IsNullDeviceURI reports whether uri is exactly the CUPS null device.
+func IsNullDeviceURI(uri string) bool {
+	return nullDeviceURIs[uri]
+}
+
 // maxPrinterURILength bounds device URIs well above anything CUPS backends generate.
 const maxPrinterURILength = 1024
 
@@ -83,10 +97,18 @@ const maxPrinterURILength = 1024
 //   - percent-encoding is well formed ('%' followed by two hex digits)
 //   - a bounded length
 //
+// The single exception to the scheme allow-list is the null device, matched
+// exactly (see nullDeviceURIs).
+//
 // Other characters are allowed because CUPS URIs legitimately use them, e.g. '&'
 // between backend options ("ipp://host/q?waitjob=false&waitprinter=false") or '$'
 // in an smb:// password.
 func IsValidPrinterURI(rawURI string) bool {
+	// Exact match only: no trimming, case folding, encoding or path variants.
+	if IsNullDeviceURI(rawURI) {
+		return true
+	}
+
 	// Check the raw value: callers pass rawURI (not the trimmed copy) to lpadmin,
 	// so leading/trailing control characters must be rejected too.
 	for i := 0; i < len(rawURI); i++ {

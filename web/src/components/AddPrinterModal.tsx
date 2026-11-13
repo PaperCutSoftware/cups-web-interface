@@ -506,6 +506,10 @@ export const AddPrinterModal: React.FC<AddPrinterModalProps> = ({
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      For a virtual (null) queue that discards jobs, enter{' '}
+                      <code className="font-mono">file:/dev/null</code>.
+                    </p>
                   </div>
                 )}
 

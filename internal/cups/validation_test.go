@@ -94,6 +94,7 @@ func TestIsValidPrinterURI(t *testing.T) {
 		"socket://192.168.1.50:9100/%3B",
 		"ipp://host/queue%7Cname%24",
 	}
+	valid = append(valid, "file:/dev/null", "file:///dev/null")
 	for _, uri := range valid {
 		if !IsValidPrinterURI(uri) {
 			t.Errorf("expected %q to be valid URI", uri)
@@ -104,6 +105,26 @@ func TestIsValidPrinterURI(t *testing.T) {
 		"",
 		"-v socket://evil",
 		"file:///etc/passwd",
+		// Only the exact null device is accepted under file:
+		"file:/dev/null/../../etc/passwd",
+		"file:/dev/null/",
+		"file:/dev/null2",
+		"file:/dev/nullx/y",
+		"file://localhost/dev/null",
+		"file:////dev/null",
+		"file:/dev//null",
+		"file:/dev/./null",
+		"file:/dev/%6eull",
+		"file:/dev/null?x=1",
+		"file:/dev/null#x",
+		"file:/dev/null ",
+		" file:/dev/null",
+		"FILE:/dev/null",
+		"file:/dev/zero",
+		"file:/dev/disk0",
+		"file:/tmp/out.prn",
+		"file:dev/null",
+		"file:/",
 		"exec:///bin/sh",
 		"javascript:alert(1)",
 		"ftp://evil.com/file",

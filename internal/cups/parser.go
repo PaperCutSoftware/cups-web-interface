@@ -93,6 +93,11 @@ func ParseCombinedStatus(statusOutput, classOutput string) map[string]*Printer {
 			if len(parts) == 2 {
 				name := strings.TrimSpace(parts[0])
 				uri := strings.TrimSpace(parts[1])
+				// lpstat prints file devices without their "file:" scheme
+				// (e.g. "/dev/null"); restore it so the URI round-trips.
+				if strings.HasPrefix(uri, "/") {
+					uri = "file:" + uri
+				}
 				p, exists := printers[name]
 				if !exists {
 					p = &Printer{Name: name, State: "unknown"}

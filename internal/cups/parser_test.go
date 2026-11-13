@@ -210,3 +210,32 @@ func TestParseIPPJobTitlesOutput(t *testing.T) {
 	}
 }
 
+
+// lpstat prints file devices without the "file:" scheme; the parser restores it
+// so a null queue's URI can be shown and saved again unchanged.
+func TestParseCombinedStatusNullDevice(t *testing.T) {
+	status := `printer Null_Queue is idle.  enabled since Fri 13 Nov 15:27:06 2026
+printer Null_Queue_Slashes is idle.  enabled since Fri 13 Nov 15:27:08 2026
+printer Net_Queue is idle.  enabled since Fri 13 Nov 15:27:08 2026
+device for Null_Queue: /dev/null
+device for Null_Queue_Slashes: ///dev/null
+device for Net_Queue: socket://192.168.1.50:9100
+`
+	printers := ParseCombinedStatus(status, "")
+	for name, want := range map[string]string{
+		"Null_Queue":         "file:/dev/null",
+		"Null_Queue_Slashes": "file:///dev/null",
+		"Net_Queue":          "socket://192.168.1.50:9100",
+	} {
+		p := printers[name]
+		if p == nil {
+			t.Fatalf("printer %s not parsed", name)
+		}
+		if p.URI != want {
+			t.Errorf("%s: expected URI %q, got %q", name, want, p.URI)
+		}
+		if name != "Net_Queue" && !IsValidPrinterURI(p.URI) {
+			t.Errorf("%s: parsed URI %q must pass validation so the queue can be edited", name, p.URI)
+		}
+	}
+}

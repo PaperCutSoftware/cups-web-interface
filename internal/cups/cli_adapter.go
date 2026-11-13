@@ -660,7 +660,7 @@ func (a *CLIAdapter) AddPrinter(params AddPrinterParams) error {
 		return fmt.Errorf("invalid printer name %q: max 127 characters, must not start with '-', and no spaces, control characters or / \\ ' \" ? #", params.Name)
 	}
 	if !IsValidPrinterURI(params.URI) {
-		return fmt.Errorf("invalid printer connection URI %q: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address without control characters or malformed %%-escapes", params.URI)
+		return fmt.Errorf("invalid printer connection URI %q: use an ipp, ipps, http, https, socket, lpd, usb, smb, dnssd or mdns address (or file:/dev/null for a null queue) without control characters or malformed %%-escapes", params.URI)
 	}
 	if params.PPDPath != "" && !IsValidDriverOrPPD(params.PPDPath) {
 		return fmt.Errorf("invalid or untrusted PPD file path: %q", params.PPDPath)
