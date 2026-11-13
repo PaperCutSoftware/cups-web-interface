@@ -266,16 +266,17 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
                       key={printer.name}
                       className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors"
                     >
-                      {/* Queue / Printer Name Column */}
-                      <td className="py-4 px-4 sm:px-6">
-                        <div className="flex items-center space-x-3">
+                      {/* Queue / Printer Name Column: takes the remaining width and truncates,
+                          so long queue names never push the Actions column out of view */}
+                      <td className="py-4 px-4 sm:px-6 w-full max-w-0">
+                        <div className="flex items-center space-x-3 min-w-[11rem]">
                           <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
                             <PrinterIcon className="w-5 h-5" />
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                               <span
-                                className="font-bold text-sm text-slate-900 dark:text-white truncate"
+                                className="font-bold text-sm text-slate-900 dark:text-white truncate min-w-0 max-w-full"
                                 title={printer.name}
                               >
                                 {printer.name}
