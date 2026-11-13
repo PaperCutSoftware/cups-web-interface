@@ -80,6 +80,11 @@ func IsNullDeviceURI(uri string) bool {
 // maxPrinterURILength bounds device URIs well above anything CUPS backends generate.
 const maxPrinterURILength = 1024
 
+// paperCutBackendPrefix is prepended to a queue's device URI by PaperCut print
+// tracking (e.g. "papercut:socket://host:9100"), which routes jobs through the
+// PaperCut CUPS backend before the real device.
+const paperCutBackendPrefix = "papercut:"
+
 // IsValidPrinterURI validates a device URI before it is passed to `lpadmin -v`.
 //
 // How the URI is handled:
@@ -100,10 +105,29 @@ const maxPrinterURILength = 1024
 // The single exception to the scheme allow-list is the null device, matched
 // exactly (see nullDeviceURIs).
 //
+// A URI may carry one leading "papercut:" prefix (see paperCutBackendPrefix).
+// The remainder is validated by the same rules, so the prefix cannot be used to
+// reach a scheme, path or character that is otherwise rejected.
+//
 // Other characters are allowed because CUPS URIs legitimately use them, e.g. '&'
 // between backend options ("ipp://host/q?waitjob=false&waitprinter=false") or '$'
 // in an smb:// password.
 func IsValidPrinterURI(rawURI string) bool {
+	if inner, ok := strings.CutPrefix(rawURI, paperCutBackendPrefix); ok {
+		// The prefix grants nothing: the wrapped URI must pass every check on
+		// its own, exactly as written (no whitespace to trim around it). A
+		// second prefix fails because "papercut" is not an allowed scheme.
+		if inner != strings.TrimSpace(inner) {
+			return false
+		}
+		return isValidDeviceURI(inner)
+	}
+	return isValidDeviceURI(rawURI)
+}
+
+// isValidDeviceURI applies the device URI rules described on IsValidPrinterURI
+// to a URI without the PaperCut backend prefix.
+func isValidDeviceURI(rawURI string) bool {
 	// Exact match only: no trimming, case folding, encoding or path variants.
 	if IsNullDeviceURI(rawURI) {
 		return true

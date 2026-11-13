@@ -150,6 +150,102 @@ func TestIsValidPrinterURI(t *testing.T) {
 			t.Errorf("expected %q to be invalid URI", uri)
 		}
 	}
+
+	// The PaperCut backend prefix must never change the outcome: every URI
+	// rejected on its own is still rejected behind "papercut:", and every URI
+	// accepted on its own (written without surrounding whitespace) is accepted.
+	for _, uri := range invalid {
+		if prefixed := "papercut:" + uri; IsValidPrinterURI(prefixed) {
+			t.Errorf("prefix must not unblock a rejected URI: %q was accepted", prefixed)
+		}
+	}
+	for _, uri := range valid {
+		prefixed := "papercut:" + uri
+		want := uri == strings.TrimSpace(uri)
+		if got := IsValidPrinterURI(prefixed); got != want {
+			t.Errorf("%q: got valid=%v, want %v", prefixed, got, want)
+		}
+	}
+}
+
+// TestPaperCutPrefixCannotBypassRules covers ways the "papercut:" prefix could be
+// abused to reach something the device URI rules block.
+func TestPaperCutPrefixCannotBypassRules(t *testing.T) {
+	accepted := []string{
+		"papercut:socket://192.168.1.50:9100",
+		"papercut:ipp://printer.local/ipp/print",
+		"papercut:ipps://printer.local:443/ipp/print",
+		"papercut:http://192.168.1.65:631/printers/Office",
+		"papercut:lpd://server/queue",
+		"papercut:dnssd://HP%20LaserJet._ipp._tcp.local./",
+		"papercut:usb://HP/LaserJet?serial=ABC123",
+		"papercut:smb://server/share",
+		"papercut:file:/dev/null",
+		"papercut:file:///dev/null",
+	}
+	for _, uri := range accepted {
+		if !IsValidPrinterURI(uri) {
+			t.Errorf("expected %q to be accepted", uri)
+		}
+	}
+
+	rejected := []string{
+		// Blocked schemes stay blocked
+		"papercut:file:///etc/passwd",
+		"papercut:file:/etc/shadow",
+		"papercut:file:/tmp/out.prn",
+		"papercut:file:/dev/zero",
+		"papercut:exec:///bin/sh",
+		"papercut:javascript:alert(1)",
+		"papercut:ftp://evil.com/file",
+		"papercut:data:text/plain,hello",
+		// Null-device look-alikes stay blocked
+		"papercut:file:/dev/null/../../etc/passwd",
+		"papercut:file:/dev/null/",
+		"papercut:file:/dev/%6eull",
+		"papercut:file://localhost/dev/null",
+		"papercut:FILE:/dev/null",
+		// The prefix alone, or with nothing usable after it
+		"papercut:",
+		"papercut://",
+		"papercut:/",
+		"papercut:socket",
+		"papercut:socket:",
+		"papercut:socket://",
+		"papercut://socket://192.168.1.50",
+		// Stacked or disguised prefixes
+		"papercut:papercut:socket://192.168.1.50",
+		"papercut:papercut:file:///etc/passwd",
+		"PAPERCUT:socket://192.168.1.50",
+		"PaperCut:socket://192.168.1.50",
+		"papercut%3Asocket://192.168.1.50",
+		"papercut;socket://192.168.1.50",
+		"xpapercut:socket://192.168.1.50",
+		"socket:papercut:file:///etc/passwd",
+		// Whitespace cannot hide what follows the prefix
+		"papercut: socket://192.168.1.50",
+		"papercut:socket://192.168.1.50 ",
+		"papercut: file:///etc/passwd",
+		"papercut:file:/dev/null ",
+		" papercut:socket://192.168.1.50",
+		// Flag injection and control characters
+		"papercut:-v socket://evil",
+		"papercut:-E",
+		"-papercut:socket://192.168.1.50",
+		"papercut:socket://192.168.1.50\nrm -rf /",
+		"papercut:socket://192.168.1.50\x00",
+		"papercut:\tsocket://192.168.1.50",
+		"papercut\n:socket://192.168.1.50",
+		// Malformed escapes and oversized values
+		"papercut:ipp://host/%zz",
+		"papercut:ipp://host/%",
+		"papercut:ipp://host/" + strings.Repeat("a", 1100),
+	}
+	for _, uri := range rejected {
+		if IsValidPrinterURI(uri) {
+			t.Errorf("expected %q to be rejected", uri)
+		}
+	}
 }
 
 func TestIsValidJobID(t *testing.T) {

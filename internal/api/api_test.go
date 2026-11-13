@@ -939,6 +939,29 @@ func TestSecurityQueueOverwriteAndValidation(t *testing.T) {
 		}
 	}
 
+	// 4c. A PaperCut-tracked queue keeps its "papercut:" prefix when saved, but
+	// the prefix cannot carry a blocked address past validation
+	for uri, wantOK := range map[string]bool{
+		"papercut:socket://192.168.1.50:9100":     true,
+		"papercut:file:/dev/null":                 true,
+		"papercut:file:///etc/shadow":             false,
+		"papercut:exec:///bin/sh":                 false,
+		"papercut:papercut:socket://192.168.1.50": false,
+		"papercut:-v socket://192.168.1.50":       false,
+	} {
+		body := `{"uri":"` + uri + `","description":"Edited","location":"Level 2","shared":false}`
+		req := newTestReq(srv, "PUT", "/api/v1/printers/Office_LaserJet_Pro", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, req)
+		if wantOK && w.Code != http.StatusOK {
+			t.Fatalf("modify with uri %q: expected 200, got %d: %s", uri, w.Code, w.Body.String())
+		}
+		if !wantOK && w.Code != http.StatusBadRequest {
+			t.Fatalf("modify with uri %q: expected 400, got %d", uri, w.Code)
+		}
+	}
+
 	// 5. Arbitrary untrusted PPD file path (/tmp/evil.ppd)
 	badPPDBody := `{"name":"Test_Queue_PPD","description":"Exploit","uri":"socket://192.168.1.99:9100","ppd_path":"/tmp/malicious.ppd"}`
 	reqBadPPD := newTestReq(srv, "POST", "/api/v1/printers", strings.NewReader(badPPDBody))
