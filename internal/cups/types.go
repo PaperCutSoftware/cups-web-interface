@@ -54,6 +54,8 @@ type LaunchAgentStatus struct {
 type ArchReadiness struct {
 	Status          string `json:"status"` // "universal", "native_arm64", "rosetta_dependent", "driverless", "missing_binary"
 	Label           string `json:"label"`
+	DriverModel     string `json:"driver_model,omitempty"`
+	PPDPath         string `json:"ppd_path,omitempty"`
 	RosettaRequired bool   `json:"rosetta_required"`
 	BinaryCount     int    `json:"binary_count"`
 }

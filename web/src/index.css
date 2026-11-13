@@ -31,14 +31,18 @@
   --color-slate-100: #eff3f7;
   --color-slate-200: #dce0e5;
   --color-slate-300: #c6ccd3;
-  --color-slate-400: #97a1ab;
-  --color-slate-500: #6f777f;
-  --color-slate-600: #5b636a;
+  --color-slate-400: #9da7b1;
+  --color-slate-500: #5c646c;
+  --color-slate-600: #464e56;
   --color-slate-700: #2a3847;
   --color-slate-800: #15212e;
   --color-slate-850: #1a2836;
   --color-slate-900: #121e2b;
   --color-slate-950: #0d1620;
+
+  /* Soft border tokens: keep panels & dividers subtle, give interactive controls a gentle definition */
+  --border-color-slate-300: #b8c0c8;
+  --border-color-slate-600: #384858;
 
   /* Brand green */
   --color-brand-50: #e7f6e9;
@@ -47,7 +51,7 @@
   --color-brand-300: #77c983;
   --color-brand-400: #4ec35e;
   --color-brand-500: #26a726;
-  --color-brand-600: #19892b;
+  --color-brand-600: #157d26;
   --color-brand-700: #0d7621;
   --color-brand-800: #006316;
   --color-brand-900: #0a4b17;

@@ -10,7 +10,10 @@ export const StuckJobsBanner: React.FC<StuckJobsBannerProps> = ({ stuckJobs, onC
   if (stuckJobs.length === 0) return null;
 
   return (
-    <div className="mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-red-600 dark:border-l-red-400 rounded-md px-4 py-3">
+    <div
+      role="alert"
+      className="mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-red-600 dark:border-l-red-400 rounded-md px-4 py-3"
+    >
       <p className="text-sm text-slate-600 dark:text-slate-300">
         <strong className="font-semibold text-slate-900 dark:text-white">
           {stuckJobs.length === 1 ? '1 print job looks stuck.' : `${stuckJobs.length} print jobs look stuck.`}
@@ -29,6 +32,7 @@ export const StuckJobsBanner: React.FC<StuckJobsBannerProps> = ({ stuckJobs, onC
               on {job.printer}
             </span>
             <button
+              type="button"
               onClick={() => onCancelJob(job.id)}
               className="ml-auto shrink-0 inline-flex items-center h-8 px-3 rounded-md text-sm font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400 transition-colors cursor-pointer"
             >

@@ -24,6 +24,7 @@ import type {
   ModifyPrinterParams,
 } from '../types/cups';
 import { api } from '../api/client';
+import { useModalDialog } from '../utils/useModalDialog';
 
 export type ConfigModalTab = 'preferences' | 'accessories' | 'audit' | 'details' | 'driver';
 
@@ -66,6 +67,8 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
   const [ppdValidation, setPpdValidation] = useState<PPDValidationResult | null>(null);
   const [validatingPPD, setValidatingPPD] = useState(false);
   const ppdFileInputId = useId();
+  const titleId = useId();
+  const dialogRef = useModalDialog(Boolean(isOpen && printer), onClose);
 
   useEffect(() => {
     if (initialTab) {
@@ -241,17 +244,24 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="fixed inset-y-0 right-0 max-w-2xl w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250 border-l border-slate-200 dark:border-slate-800">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="fixed inset-y-0 right-0 max-w-2xl w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250 border-l border-slate-200 dark:border-slate-800 focus:outline-none"
+      >
         
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Sliders className="w-5 h-5" />
+              <Sliders className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                <h2 id={titleId} className="text-base font-bold text-slate-900 dark:text-white">
                   {printer.name}
                 </h2>
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -264,18 +274,27 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             aria-label="Close dialog"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-900/50 px-6 pt-2 shrink-0">
+        <div
+          role="tablist"
+          aria-label="Queue configuration sections"
+          className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-900/50 px-6 pt-2 shrink-0"
+        >
           <button
             type="button"
+            role="tab"
+            id="config-tab-preferences"
+            aria-selected={activeTab === 'preferences'}
+            aria-controls="config-tabpanel-preferences"
             onClick={() => setActiveTab('preferences')}
             className={`flex items-center space-x-2 py-2.5 px-3 text-xs font-semibold border-b-2 transition -mb-px shrink-0 cursor-pointer ${
               activeTab === 'preferences'
@@ -283,12 +302,16 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
-            <Sliders className={`w-3.5 h-3.5 ${activeTab === 'preferences' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+            <Sliders className={`w-3.5 h-3.5 ${activeTab === 'preferences' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Default Options</span>
           </button>
 
           <button
             type="button"
+            role="tab"
+            id="config-tab-accessories"
+            aria-selected={activeTab === 'accessories'}
+            aria-controls="config-tabpanel-accessories"
             onClick={() => setActiveTab('accessories')}
             className={`flex items-center space-x-2 py-2.5 px-3 text-xs font-semibold border-b-2 transition -mb-px shrink-0 cursor-pointer ${
               activeTab === 'accessories'
@@ -296,10 +319,10 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
-            <Box className={`w-3.5 h-3.5 ${activeTab === 'accessories' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+            <Box className={`w-3.5 h-3.5 ${activeTab === 'accessories' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Hardware Accessories</span>
             {options?.accessories && options.accessories.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-slate-700 text-blue-800 dark:text-white border border-blue-200 dark:border-slate-600">
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-xs font-bold bg-blue-100 dark:bg-slate-700 text-blue-800 dark:text-white border border-blue-200 dark:border-slate-600">
                 {options.accessories.length}
               </span>
             )}
@@ -307,6 +330,10 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
 
           <button
             type="button"
+            role="tab"
+            id="config-tab-details"
+            aria-selected={activeTab === 'details'}
+            aria-controls="config-tabpanel-details"
             onClick={() => setActiveTab('details')}
             className={`flex items-center space-x-2 py-2.5 px-3 text-xs font-semibold border-b-2 transition -mb-px shrink-0 cursor-pointer ${
               activeTab === 'details'
@@ -314,12 +341,16 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
-            <Network className={`w-3.5 h-3.5 ${activeTab === 'details' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+            <Network className={`w-3.5 h-3.5 ${activeTab === 'details' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Queue Details</span>
           </button>
 
           <button
             type="button"
+            role="tab"
+            id="config-tab-driver"
+            aria-selected={activeTab === 'driver'}
+            aria-controls="config-tabpanel-driver"
             onClick={() => setActiveTab('driver')}
             className={`flex items-center space-x-2 py-2.5 px-3 text-xs font-semibold border-b-2 transition -mb-px shrink-0 cursor-pointer ${
               activeTab === 'driver'
@@ -327,12 +358,16 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
-            <Layers className={`w-3.5 h-3.5 ${activeTab === 'driver' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+            <Layers className={`w-3.5 h-3.5 ${activeTab === 'driver' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Swap Driver</span>
           </button>
 
           <button
             type="button"
+            role="tab"
+            id="config-tab-audit"
+            aria-selected={activeTab === 'audit'}
+            aria-controls="config-tabpanel-audit"
             onClick={() => setActiveTab('audit')}
             className={`flex items-center space-x-2 py-2.5 px-3 text-xs font-semibold border-b-2 transition -mb-px shrink-0 cursor-pointer ${
               activeTab === 'audit'
@@ -340,33 +375,45 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
-            <Cpu className={`w-3.5 h-3.5 ${activeTab === 'audit' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+            <Cpu className={`w-3.5 h-3.5 ${activeTab === 'audit' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Rosetta 2 &amp; Audit</span>
             {printer.arch_readiness?.rosetta_required && (
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
             )}
           </button>
         </div>
 
         {/* Status Alerts */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div
+            role="alert"
+            className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2"
+          >
+            <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
         {successMessage && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div
+            role="status"
+            aria-live="polite"
+            className="mx-6 mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center space-x-2"
+          >
+            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{successMessage}</span>
           </div>
         )}
 
         {/* Tab Content Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div
+          id={`config-tabpanel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`config-tab-${activeTab}`}
+          className="p-6 overflow-y-auto flex-1 space-y-6"
+        >
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-hidden="true" />
               <p className="text-xs">Inspecting PPD driver and hardware options...</p>
             </div>
           ) : activeTab === 'preferences' ? (
@@ -375,21 +422,26 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               {options?.general && options.general.length > 0 ? (
                 options.general.map((opt) => {
                   const currentValue = formValues[opt.key] || opt.default_value;
+                  const selectId = `pref-opt-${opt.key}`;
                   return (
                     <div
                       key={opt.key}
-                      className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-2"
+                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-2"
                     >
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <label
+                          htmlFor={selectId}
+                          className="text-xs font-semibold text-slate-800 dark:text-slate-200"
+                        >
                           {opt.display_name}
                         </label>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                           {opt.key}
                         </span>
                       </div>
 
                       <select
+                        id={selectId}
                         value={currentValue}
                         onChange={(e) => handleValueChange(opt.key, e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -404,7 +456,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                   );
                 })
               ) : (
-                <div className="text-center py-10 text-slate-400 text-xs">
+                <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-xs">
                   No configurable PPD default options found for this print queue.
                 </div>
               )}
@@ -415,21 +467,26 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               {options?.accessories && options.accessories.length > 0 ? (
                 options.accessories.map((opt) => {
                   const currentValue = formValues[opt.key] || opt.default_value;
+                  const selectId = `acc-opt-${opt.key}`;
                   return (
                     <div
                       key={opt.key}
-                      className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-2"
+                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-2"
                     >
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <label
+                          htmlFor={selectId}
+                          className="text-xs font-semibold text-slate-800 dark:text-slate-200"
+                        >
                           {opt.display_name}
                         </label>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                           {opt.key}
                         </span>
                       </div>
 
                       <select
+                        id={selectId}
                         value={currentValue}
                         onChange={(e) => handleValueChange(opt.key, e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -444,7 +501,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                   );
                 })
               ) : (
-                <div className="text-center py-10 text-slate-400 text-xs">
+                <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-xs">
                   No installable hardware accessories (trays, finishers) declared in this printer's PPD.
                 </div>
               )}
@@ -453,53 +510,69 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
             /* Tab 3: Queue Details */
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label
+                  htmlFor="config-queue-name"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
                   Queue Name (CUPS Identifier)
                 </label>
                 <input
+                  id="config-queue-name"
                   type="text"
                   value={printer.name}
                   disabled
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-xs text-slate-500 font-mono cursor-not-allowed"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-xs text-slate-500 dark:text-slate-400 font-mono cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label
+                  htmlFor="config-device-uri"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
                   Device Connection URI
                 </label>
                 <input
+                  id="config-device-uri"
                   type="text"
                   value={detailsURI}
                   onChange={(e) => setDetailsURI(e.target.value)}
                   placeholder="socket://192.168.1.50:9100"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label
+                  htmlFor="config-description"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
                   Description / Human Friendly Name
                 </label>
                 <input
+                  id="config-description"
                   type="text"
                   value={detailsDescription}
                   onChange={(e) => setDetailsDescription(e.target.value)}
                   placeholder="e.g. 2nd Floor Color Copier"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label
+                  htmlFor="config-location"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+                >
                   Physical Location
                 </label>
                 <input
+                  id="config-location"
                   type="text"
                   value={detailsLocation}
                   onChange={(e) => setDetailsLocation(e.target.value)}
                   placeholder="e.g. Room 204"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -515,26 +588,26 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                       Share printer queue via Bonjour / mDNS
                     </span>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Controls CUPS <code>-u allow:all</code> vs <code>-u default:deny</code> publishing.
                     </p>
                   </div>
                 </label>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/80">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
                       System Default Destination
                     </span>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Target queue used when print jobs don't specify a printer destination.
                     </p>
                   </div>
                   {printer.is_default ? (
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
-                      <Star className="w-3 h-3 fill-current" />
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
+                      <Star className="w-3 h-3 fill-current" aria-hidden="true" />
                       <span>Current Default</span>
                     </span>
                   ) : (
@@ -550,7 +623,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                       }}
                       className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 cursor-pointer flex items-center space-x-1.5 transition"
                     >
-                      <Star className="w-3.5 h-3.5 text-amber-500" />
+                      <Star className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
                       <span>Set as Default</span>
                     </button>
                   )}
@@ -560,24 +633,42 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
           ) : activeTab === 'driver' ? (
             /* Tab 4: Swap Driver / PPD */
             <div className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Current Driver:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {printer.info || printer.name}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-4 text-xs">
+                <div className="min-w-0 space-y-1">
+                  <span className="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold block">
+                    Current Driver in Use
                   </span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block">
+                    {audit?.driver_model || printer.arch_readiness?.driver_model || 'PostScript Printer Driver (PPD)'}
+                  </span>
+                  {(audit?.ppd_path || printer.arch_readiness?.ppd_path) && (
+                    <span className="text-xs font-mono text-slate-500 dark:text-slate-400 block truncate">
+                      {audit?.ppd_path || printer.arch_readiness?.ppd_path}
+                    </span>
+                  )}
                 </div>
-                {printer.arch_readiness && (
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                    {printer.arch_readiness.label}
-                  </span>
-                )}
+                <div className="shrink-0 pt-0.5">
+                  {(audit?.rosetta_required ?? printer.arch_readiness?.rosetta_required) ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                      <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      <span>Intel only</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {(audit?.status || printer.arch_readiness?.status) === 'driverless' ? 'Driverless' : 'Universal'}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Driver search input */}
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <label htmlFor="config-driver-search" className="sr-only">
+                  Search installed drivers by make, model, or file
+                </label>
+                <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
                 <input
+                  id="config-driver-search"
                   type="text"
                   value={driverSearch}
                   onChange={(e) => {
@@ -585,19 +676,20 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     loadDrivers(e.target.value);
                   }}
                   placeholder="Search installed drivers by make, model, or file..."
-                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Search installed drivers by make, model, or file"
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Drivers list */}
               <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
                 {loadingDrivers ? (
-                  <div className="p-4 text-center text-xs text-slate-400 flex items-center justify-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center space-x-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" aria-hidden="true" />
                     <span>Searching drivers...</span>
                   </div>
                 ) : driverCatalog.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-slate-400">
+                  <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
                     No drivers found.
                   </div>
                 ) : (
@@ -607,6 +699,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                       <button
                         key={d.name}
                         type="button"
+                        aria-pressed={isSelected}
                         onClick={() => setSelectedDriver(d)}
                         className={`w-full text-left p-2.5 flex items-center justify-between text-xs transition cursor-pointer ${
                           isSelected
@@ -618,25 +711,20 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                           <div className="font-semibold text-slate-900 dark:text-white truncate">
                             {d.model}
                           </div>
-                          <div className="text-[10px] font-mono text-slate-400 truncate">
+                          <div className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
                             {d.name}
                           </div>
                         </div>
 
                         <div className="shrink-0">
-                          {d.arch_readiness.status === 'universal' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                              Universal
+                          {d.arch_readiness.status === 'rosetta_dependent' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <span>Intel only</span>
                             </span>
-                          )}
-                          {d.arch_readiness.status === 'rosetta_dependent' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                              Rosetta 2
-                            </span>
-                          )}
-                          {d.arch_readiness.status === 'driverless' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                              Driverless
+                          ) : (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {d.arch_readiness.status === 'driverless' ? 'Driverless' : 'Universal'}
                             </span>
                           )}
                         </div>
@@ -659,21 +747,22 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     onChange={handlePPDFileChange}
                     className="sr-only"
                   />
-                  <Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
                   <span className="text-xs text-slate-700 dark:text-slate-300">
                     {uploadedPPD ? uploadedPPD.name : 'Or upload custom .ppd file'}
                   </span>
                 </label>
 
                 {validatingPPD && (
-                  <div className="p-2 text-center text-xs text-slate-500 flex items-center justify-center space-x-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                  <div className="p-2 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center space-x-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" aria-hidden="true" />
                     <span>Validating PPD syntax...</span>
                   </div>
                 )}
 
                 {ppdValidation && (
                   <div
+                    role={ppdValidation.valid ? 'status' : 'alert'}
                     className={`p-3 rounded-xl border text-xs space-y-1 ${
                       ppdValidation.valid
                         ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
@@ -683,18 +772,18 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     <div className="flex items-center space-x-1.5 font-semibold">
                       {ppdValidation.valid ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                           <span>Valid PPD: {ppdValidation.model}</span>
                         </>
                       ) : (
                         <>
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" aria-hidden="true" />
                           <span>PPD Validation Failed</span>
                         </>
                       )}
                     </div>
                     {ppdValidation.errors && ppdValidation.errors.length > 0 && (
-                      <p className="text-[10px] text-rose-700 dark:text-rose-300 font-mono">
+                      <p className="text-xs text-rose-700 dark:text-rose-300 font-mono">
                         {ppdValidation.errors[0]}
                       </p>
                     )}
@@ -707,6 +796,35 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
             <div className="space-y-5">
               {audit ? (
                 <>
+                  {/* Current Driver Callout */}
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                        Current Driver in Use
+                      </span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white block">
+                        {audit.driver_model || 'PostScript Printer Driver (PPD)'}
+                      </span>
+                      {audit.ppd_path ? (
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400 block truncate">
+                          {audit.ppd_path}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                          No local PPD file (Driverless / System Proxy)
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('driver')}
+                      className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      Swap Driver →
+                    </button>
+                  </div>
+
                   <div
                     className={`p-4 rounded-2xl border ${
                       audit.rosetta_required
@@ -722,7 +840,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                             : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
                         }`}
                       >
-                        <Cpu className="w-5 h-5" />
+                        <Cpu className="w-5 h-5" aria-hidden="true" />
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -736,7 +854,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <h5 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Compiled Mach-O Binaries &amp; Architecture Slices
                     </h5>
                     {audit.binaries && audit.binaries.length > 0 ? (
@@ -753,31 +871,31 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                               {bin.slices.map((slice) => (
                                 <span
                                   key={slice}
-                                  className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                  className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                                 >
                                   {slice}
                                 </span>
                               ))}
                             </div>
                           </div>
-                          <p className="text-[11px] font-mono text-slate-400 truncate">
+                          <p className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate">
                             {bin.path}
                           </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {bin.recommendation}
                           </p>
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-400">
-                        <Sparkles className="w-5 h-5 mx-auto mb-1 text-sky-500" />
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500 dark:text-slate-400">
+                        <Sparkles className="w-5 h-5 mx-auto mb-1 text-sky-500" aria-hidden="true" />
                         No external vendor filter binaries required. Uses native system PDF rasterization.
                       </div>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8 text-slate-400 text-xs">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
                   No architecture audit data available.
                 </div>
               )}
@@ -787,7 +905,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {activeTab === 'audit' ? 'Audit verified via debug/macho' : 'Changes apply immediately to CUPS queue'}
           </span>
 

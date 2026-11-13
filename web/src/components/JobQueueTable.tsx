@@ -108,25 +108,35 @@ export const JobQueueTable: React.FC<JobQueueTableProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       {/* Header with Tabs & Search */}
-      <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/80 p-1 rounded-xl">
+      <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div
+          role="tablist"
+          aria-label="Job queue filter"
+          className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 p-1 rounded-xl"
+        >
           <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'active'}
             onClick={() => setTab('active')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
               tab === 'active'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/80 dark:border-slate-600'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200 dark:border-slate-600'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Active Queues ({activeJobs.length})
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'completed'}
             onClick={() => setTab('completed')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
               tab === 'completed'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/80 dark:border-slate-600'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200 dark:border-slate-600'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -136,13 +146,18 @@ export const JobQueueTable: React.FC<JobQueueTableProps> = ({
 
         {/* Search */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <label htmlFor="job-search-input" className="sr-only">
+            Search print jobs
+          </label>
+          <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
           <input
+            id="job-search-input"
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search jobs, printers, users..."
-            className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+            aria-label="Search print jobs"
+            className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
           />
         </div>
       </div>
@@ -151,7 +166,7 @@ export const JobQueueTable: React.FC<JobQueueTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[11px]">
+            <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-xs">
               <th className="py-3 px-4 font-semibold">Job ID</th>
               <th className="py-3 px-4 font-semibold">Document Title</th>
               <th className="py-3 px-4 font-semibold">Target Printer</th>
@@ -162,18 +177,18 @@ export const JobQueueTable: React.FC<JobQueueTableProps> = ({
               <th className="py-3 px-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
             {filteredJobs.length === 0 ? (
               <tr>
                 <td
                   colSpan={8}
                   className="py-12 text-center text-slate-500 dark:text-slate-400"
                 >
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" aria-hidden="true" />
                   <p className="font-medium text-sm">
                     {tab === 'active' ? 'No active print jobs' : 'No completed jobs recorded'}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {tab === 'active'
                       ? 'Queues are clear and ready to accept print requests.'
                       : 'Recently finished jobs will be logged here.'}

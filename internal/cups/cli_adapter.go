@@ -113,6 +113,8 @@ func (a *CLIAdapter) GetPrinters() ([]Printer, error) {
 			p.ArchReadiness = &ArchReadiness{
 				Status:          audit.Status,
 				Label:           audit.Label,
+				DriverModel:     audit.DriverModel,
+				PPDPath:         audit.PPDPath,
 				RosettaRequired: audit.RosettaRequired,
 				BinaryCount:     len(audit.Binaries),
 			}

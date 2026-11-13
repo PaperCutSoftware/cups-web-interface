@@ -102,7 +102,7 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
   const stateStyle = getStateBadge();
 
   return (
-    <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between">
+    <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between">
       <div>
         {/* Header: Name, Subtitle, Badges */}
         <div className="flex items-start justify-between gap-3">
@@ -149,7 +149,7 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
         </div>
 
         {/* Metadata section */}
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-2 text-xs text-slate-600 dark:text-slate-300">
           {/* Driver & Architecture Readiness */}
           {printer.arch_readiness && (
             <div className="flex items-center justify-between text-xs py-0.5">
@@ -160,7 +160,7 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
               <button
                 type="button"
                 onClick={() => onConfigure?.(printer, 'audit')}
-                className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap cursor-pointer hover:opacity-85 transition ${
+                className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md text-xs font-medium border whitespace-nowrap cursor-pointer hover:opacity-85 transition ${
                   printer.arch_readiness.rosetta_required
                     ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-700/80 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                     : printer.arch_readiness.status === 'driverless'
@@ -170,11 +170,11 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
                 title="Click to view Rosetta 2 & Mach-O binary audit"
               >
                 {printer.arch_readiness.rosetta_required ? (
-                  <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden="true" />
                 ) : printer.arch_readiness.status === 'driverless' ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" aria-hidden="true" />
                 ) : (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
                 )}
                 <span>{printer.arch_readiness.label}</span>
               </button>
@@ -182,14 +182,14 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
           )}
           {printer.location && (
             <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400">
-              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">{printer.location}</span>
             </div>
           )}
 
           {printer.uri && (
-            <div className="flex items-center space-x-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">
-              <HardDrive className="w-3.5 h-3.5 shrink-0" />
+            <div className="flex items-center space-x-2 font-mono text-xs text-slate-500 dark:text-slate-400">
+              <HardDrive className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate" title={printer.uri}>
                 {printer.uri}
               </span>
@@ -197,7 +197,7 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
           )}
 
           {printer.state_message && printer.state_message !== 'Ready to print' && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
               {printer.state_message}
             </p>
           )}
@@ -214,9 +214,9 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
                 return (
                   <span
                     key={alert}
-                    className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-medium border ${color}`}
+                    className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-xs font-medium border ${color}`}
                   >
-                    <AlertCircle className="w-3 h-3" />
+                    <AlertCircle className="w-3 h-3" aria-hidden="true" />
                     <span>{label}</span>
                   </span>
                 );
@@ -227,10 +227,10 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
       </div>
 
       {/* Footer & Actions */}
-      <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+      <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center space-x-1.5">
-            <FileText className="w-3.5 h-3.5" />
+            <FileText className="w-3.5 h-3.5" aria-hidden="true" />
             <span>
               {printer.queued_jobs_count === 1
                 ? '1 job in queue'
@@ -242,29 +242,34 @@ export const PrinterCard: React.FC<PrinterCardProps> = ({
             confirmPurge ? (
               <div className="flex items-center space-x-1">
                 <button
+                  type="button"
                   onClick={handlePurge}
                   disabled={actionLoading}
-                  className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-rose-600 text-white hover:bg-rose-700 transition cursor-pointer"
+                  className="px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition cursor-pointer"
                   title="Confirm purging all jobs in this queue"
                 >
                   Purge?
                 </button>
                 <button
+                  type="button"
                   onClick={() => setConfirmPurge(false)}
                   disabled={actionLoading}
-                  className="px-1 py-0.5 rounded text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label="Cancel purge"
+                  className="px-1 py-0.5 rounded text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
             ) : (
               <button
+                type="button"
                 onClick={() => setConfirmPurge(true)}
                 disabled={actionLoading}
                 title="Purge all jobs in this queue"
-                className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                aria-label={`Purge all jobs in ${printer.name}`}
+                className="p-1 rounded text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             )
           )}

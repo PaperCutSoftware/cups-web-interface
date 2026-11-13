@@ -258,30 +258,38 @@ export function App() {
       />
 
       {/* Floating Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+      <div
+        role={toast?.type === 'error' ? 'alert' : 'status'}
+        aria-live={toast?.type === 'error' ? 'assertive' : 'polite'}
+        aria-atomic="true"
+        className="fixed bottom-6 right-6 z-50"
+      >
+        {toast && (
           <div
-            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-medium ${
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-medium animate-fade-in ${
               toast.type === 'success'
                 ? 'bg-emerald-600 text-white border-emerald-500'
                 : 'bg-rose-600 text-white border-rose-500'
             }`}
           >
             {toast.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
             ) : (
-              <AlertCircle className="w-4 h-4" />
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             )}
             <span>{toast.message}</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Error Banner */}
         {error && (
-          <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+          <div
+            role="alert"
+            className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs flex items-center space-x-3"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" aria-hidden="true" />
             <div>
               <span className="font-semibold">Backend Communication Error:</span> {error}
             </div>
@@ -297,7 +305,7 @@ export function App() {
         {(() => {
           const pausedCount = printers.filter((p) => p.state === 'stopped').length;
           const cell = 'px-5 py-4 min-w-0';
-          const label = 'text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400';
+          const label = 'text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400';
           const value = 'font-semibold text-slate-900 dark:text-white mt-1 truncate';
           const hint = 'text-xs text-slate-500 dark:text-slate-400';
           const attention = 'text-xs font-semibold text-amber-600 dark:text-amber-400';
@@ -337,6 +345,26 @@ export function App() {
 
         {/* Top-Level Navigation Tabs */}
         {(() => {
+          const tabs: Array<'printers' | 'jobs' | 'logs'> = ['printers', 'jobs', 'logs'];
+          const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+            const idx = tabs.indexOf(activeTab);
+            let nextIdx = idx;
+            if (e.key === 'ArrowRight') {
+              nextIdx = (idx + 1) % tabs.length;
+            } else if (e.key === 'ArrowLeft') {
+              nextIdx = (idx - 1 + tabs.length) % tabs.length;
+            } else if (e.key === 'Home') {
+              nextIdx = 0;
+            } else if (e.key === 'End') {
+              nextIdx = tabs.length - 1;
+            } else {
+              return;
+            }
+            e.preventDefault();
+            const nextTab = tabs[nextIdx];
+            setActiveTab(nextTab);
+            document.getElementById(`tab-${nextTab}`)?.focus();
+          };
           const tab = (active: boolean) =>
             `inline-flex items-center gap-2 pt-2 pb-2.5 text-[15px] font-semibold border-b-[3px] -mb-px transition-colors cursor-pointer whitespace-nowrap ${
               active
@@ -346,12 +374,35 @@ export function App() {
           const count = 'text-sm font-normal text-slate-500 dark:text-slate-400';
           const problem = 'text-sm font-semibold text-red-600 dark:text-red-400';
           return (
-            <div className="flex items-center gap-7 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
-              <button type="button" role="tab" onClick={() => setActiveTab('printers')} className={tab(activeTab === 'printers')}>
+            <div
+              role="tablist"
+              aria-label="Dashboard sections"
+              onKeyDown={handleTabKeyDown}
+              className="flex items-center gap-7 border-b border-slate-200 dark:border-slate-700 overflow-x-auto"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="tab-printers"
+                aria-selected={activeTab === 'printers'}
+                aria-controls="tabpanel-printers"
+                tabIndex={activeTab === 'printers' ? 0 : -1}
+                onClick={() => setActiveTab('printers')}
+                className={tab(activeTab === 'printers')}
+              >
                 <span>Printers &amp; Queues</span>
                 <span className={count}>{printers.length}</span>
               </button>
-              <button type="button" role="tab" onClick={() => setActiveTab('jobs')} className={tab(activeTab === 'jobs')}>
+              <button
+                type="button"
+                role="tab"
+                id="tab-jobs"
+                aria-selected={activeTab === 'jobs'}
+                aria-controls="tabpanel-jobs"
+                tabIndex={activeTab === 'jobs' ? 0 : -1}
+                onClick={() => setActiveTab('jobs')}
+                className={tab(activeTab === 'jobs')}
+              >
                 <span>Print Jobs</span>
                 {stuckJobs.length > 0 ? (
                   <span className={problem} title={`${stuckJobs.length} stuck job(s)`}>
@@ -361,7 +412,16 @@ export function App() {
                   <span className={count}>{activeJobs.length}</span>
                 )}
               </button>
-              <button type="button" role="tab" onClick={() => setActiveTab('logs')} className={tab(activeTab === 'logs')}>
+              <button
+                type="button"
+                role="tab"
+                id="tab-logs"
+                aria-selected={activeTab === 'logs'}
+                aria-controls="tabpanel-logs"
+                tabIndex={activeTab === 'logs' ? 0 : -1}
+                onClick={() => setActiveTab('logs')}
+                className={tab(activeTab === 'logs')}
+              >
                 <span>Logs &amp; Diagnostics</span>
                 {diagnosticIssueCount > 0 && (
                   <span className={problem}>
@@ -375,7 +435,7 @@ export function App() {
 
         {/* Tab 1: Printers & Queues Table View */}
         {activeTab === 'printers' && (
-          <div className="space-y-4">
+          <div id="tabpanel-printers" role="tabpanel" aria-labelledby="tab-printers" className="space-y-4">
             {rosettaRiskCount > 0 && (
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
@@ -394,12 +454,12 @@ export function App() {
             {loading && printers.length === 0 ? (
               <div className="h-64 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 animate-pulse" />
             ) : printers.length === 0 ? (
-              <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-12 text-center text-slate-500 dark:text-slate-400">
-                <PrinterIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400">
+                <PrinterIcon className="w-10 h-10 mx-auto mb-3 opacity-40" aria-hidden="true" />
                 <p className="font-semibold text-base text-slate-900 dark:text-white">
                   No Printers Configured
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   CUPS does not currently have any active printer destinations registered.
                 </p>
               </div>
@@ -429,7 +489,7 @@ export function App() {
 
         {/* Tab 2: Print Jobs & Document Queue */}
         {activeTab === 'jobs' && (
-          <div className="space-y-4">
+          <div id="tabpanel-jobs" role="tabpanel" aria-labelledby="tab-jobs" className="space-y-4">
             <JobQueueTable
               activeJobs={activeJobs}
               completedJobs={completedJobs}
@@ -443,7 +503,9 @@ export function App() {
 
         {/* Tab 3: System Logs & Intelligent Diagnostics Engine */}
         {activeTab === 'logs' && (
-          <LogsViewer />
+          <div id="tabpanel-logs" role="tabpanel" aria-labelledby="tab-logs">
+            <LogsViewer />
+          </div>
         )}
 
         {/* Slide-over Drawer for PPD Configuration, Details, Driver & Rosetta 2 Audit */}
@@ -507,12 +569,22 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 space-y-3">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <p>
-              Web interface for CUPS • Bound strictly to loopback{' '}
-              <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">127.0.0.1:6310</code>
+              &copy; Copyright 1999-2026. PaperCut Software Pty Ltd. • Released under the{' '}
+              <a
+                href="https://opensource.org/licenses/MIT"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              >
+                MIT Open Source License
+              </a>
             </p>
-            <p>Designed for macOS &amp; UNIX</p>
+            <p>
+              Bound strictly to loopback{' '}
+              <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">127.0.0.1:6310</code> • Designed for macOS &amp; UNIX
+            </p>
           </div>
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400 text-center">
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-xs leading-relaxed text-slate-500 dark:text-slate-400 text-center">
             Copyright &copy; 2007-2022 Apple Inc. CUPS 2.2 and earlier are provided under the terms of the{' '}
             <a
               href="https://www.cups.org/doc/old-license.html"

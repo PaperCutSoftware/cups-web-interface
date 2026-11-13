@@ -45,6 +45,8 @@ export interface LaunchAgentStatus {
 export interface ArchReadiness {
   status: 'universal' | 'native_arm64' | 'rosetta_dependent' | 'driverless' | 'missing_binary' | string;
   label: string;
+  driver_model?: string;
+  ppd_path?: string;
   rosetta_required: boolean;
   binary_count: number;
 }

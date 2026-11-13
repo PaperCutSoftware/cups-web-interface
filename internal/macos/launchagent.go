@@ -135,30 +135,47 @@ func Install(binaryPath string, port int, host string) error {
 		absBinary = binaryPath
 	}
 
+	plistPath, err := GetPlistPath()
+	if err != nil {
+		return err
+	}
+
+	// Unload any previous running instance before replacing the binary on disk
+	_ = exec.Command("launchctl", "unload", plistPath).Run()
+
 	// Copy binary to ~/Library/Application Support/cups-webui/cups-webui.
 	// This ensures:
 	// 1. launchd executes outside of ~/Documents or ~/Downloads, preventing macOS TCC permission dialogs.
 	// 2. The background service persists independently of development or temporary build folders.
+	// 3. Writing to a temp file and renaming (new inode) avoids macOS arm64 vnode code-signature cache invalidation (SIGKILL) on upgrade.
 	targetBinary, err := GetInstalledBinaryPath()
 	if err == nil {
-		targetDir := filepath.Dir(targetBinary)
-		if err := os.MkdirAll(targetDir, 0755); err == nil {
-			if data, err := os.ReadFile(absBinary); err == nil {
-				if err := os.WriteFile(targetBinary, data, 0755); err == nil {
-					absBinary = targetBinary
-				}
+		if filepath.Clean(absBinary) != filepath.Clean(targetBinary) {
+			targetDir := filepath.Dir(targetBinary)
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				return fmt.Errorf("failed to create application support directory: %w", err)
+			}
+			data, err := os.ReadFile(absBinary)
+			if err != nil {
+				return fmt.Errorf("failed to read source binary %s: %w", absBinary, err)
+			}
+			tmpBinary := targetBinary + ".tmp"
+			_ = os.Remove(tmpBinary)
+			if err := os.WriteFile(tmpBinary, data, 0755); err != nil {
+				return fmt.Errorf("failed to stage binary to %s: %w", tmpBinary, err)
+			}
+			_ = os.Remove(targetBinary)
+			if err := os.Rename(tmpBinary, targetBinary); err != nil {
+				_ = os.Remove(tmpBinary)
+				return fmt.Errorf("failed to replace installed binary at %s: %w", targetBinary, err)
 			}
 		}
+		absBinary = targetBinary
 	}
 
 	plistContent, err := GeneratePlist(absBinary, port, host)
 	if err != nil {
 		return fmt.Errorf("failed to generate LaunchAgent plist: %w", err)
-	}
-
-	plistPath, err := GetPlistPath()
-	if err != nil {
-		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(plistPath), 0755); err != nil {
@@ -168,9 +185,6 @@ func Install(binaryPath string, port int, host string) error {
 	if err := os.WriteFile(plistPath, []byte(plistContent), 0644); err != nil {
 		return fmt.Errorf("failed to write LaunchAgent plist to %s: %w", plistPath, err)
 	}
-
-	// Unload previous instance if loaded
-	_ = exec.Command("launchctl", "unload", plistPath).Run()
 
 	// Load the newly installed LaunchAgent
 	cmd := exec.Command("launchctl", "load", plistPath)
