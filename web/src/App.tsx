@@ -288,20 +288,6 @@ export function App() {
           </div>
         )}
 
-        {/* macOS Legacy Web Interface Notice */}
-        {status && !status.web_interface_enabled && (
-          <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 text-blue-900 dark:text-blue-200 text-xs flex items-start space-x-3">
-            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold">Built-in CUPS web interface:</span> By default,
-              macOS disables legacy CUPS web access at{' '}
-              <code className="bg-blue-100 dark:bg-blue-900/60 px-1 py-0.5 rounded font-mono">localhost:631</code>{' '}
-              for security. CUPS webui bypasses this friction by providing a safe, loopback-only
-              interface without requiring terminal commands.
-            </div>
-          </div>
-        )}
-
         {/* Stuck Jobs Alert (Persistent Notification if any job is stuck) */}
         {stuckJobs.length > 0 && (
           <StuckJobsBanner stuckJobs={stuckJobs} onCancelJob={handleCancelJob} />
