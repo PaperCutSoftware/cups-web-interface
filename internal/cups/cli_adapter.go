@@ -715,27 +715,31 @@ func (a *CLIAdapter) ModifyPrinter(name string, params ModifyPrinterParams) erro
 	ctx, cancel := context.WithTimeout(context.Background(), a.timeout)
 	defer cancel()
 
-	args := []string{"-p", name}
-	if params.URI != "" {
-		args = append(args, "-v", params.URI)
-	}
-	if params.Description != "" {
-		args = append(args, "-D", params.Description)
-	}
-	if params.Location != "" {
-		args = append(args, "-L", params.Location)
-	}
-	if params.Shared {
-		args = append(args, "-o", "printer-is-shared=true")
-	} else {
-		args = append(args, "-o", "printer-is-shared=false")
-	}
-
-	if _, err := a.runCommand(ctx, "lpadmin", args...); err != nil {
+	if _, err := a.runCommand(ctx, "lpadmin", modifyPrinterArgs(name, params)...); err != nil {
 		return fmt.Errorf("failed to update printer: %w", err)
 	}
 
 	return nil
+}
+
+// modifyPrinterArgs builds the lpadmin arguments for ModifyPrinter. A nil field is
+// left out so CUPS keeps its current value; an empty description or location is
+// passed through, which clears it.
+func modifyPrinterArgs(name string, params ModifyPrinterParams) []string {
+	args := []string{"-p", name}
+	if params.URI != "" {
+		args = append(args, "-v", params.URI)
+	}
+	if params.Description != nil {
+		args = append(args, "-D", *params.Description)
+	}
+	if params.Location != nil {
+		args = append(args, "-L", *params.Location)
+	}
+	if params.Shared != nil {
+		args = append(args, "-o", fmt.Sprintf("printer-is-shared=%t", *params.Shared))
+	}
+	return args
 }
 
 // SetPrinterDriver swaps the driver/PPD on an existing queue.

@@ -1201,3 +1201,57 @@ func TestSetTokenIgnoresEmpty(t *testing.T) {
 		t.Fatalf("expected token to remain %q after SetToken(\"\"), got %q", testSecretToken, srv.Token())
 	}
 }
+
+// Saving a queue with an emptied description or location must clear it, while
+// fields left out of the request must keep their current values.
+func TestModifyPrinterClearsAndPreservesFields(t *testing.T) {
+	srv, _ := setupTestServer()
+	const queue = "Office_LaserJet_Pro"
+
+	put := func(body string) {
+		t.Helper()
+		req := newTestReq(srv, "PUT", "/api/v1/printers/"+queue, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("PUT %s: expected 200, got %d: %s", body, w.Code, w.Body.String())
+		}
+	}
+	get := func() cups.Printer {
+		t.Helper()
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, newTestReq(srv, "GET", "/api/v1/printers/"+queue, nil))
+		var p cups.Printer
+		if err := json.Unmarshal(w.Body.Bytes(), &p); err != nil {
+			t.Fatalf("decoding printer: %v", err)
+		}
+		return p
+	}
+
+	put(`{"description":"Front desk","location":"Level 2","shared":true}`)
+	if p := get(); p.Info != "Front desk" || p.Location != "Level 2" || !p.IsShared {
+		t.Fatalf("setup save not applied: %+v", p)
+	}
+	uri := get().URI
+
+	// Emptied fields are cleared
+	put(`{"description":"","location":"","shared":true}`)
+	if p := get(); p.Info != "" || p.Location != "" {
+		t.Fatalf("expected description and location to be cleared, got info=%q location=%q", p.Info, p.Location)
+	}
+
+	// Fields left out are preserved, including sharing and the device URI
+	put(`{"description":"Front desk","location":"Level 2","shared":true}`)
+	put(`{"location":"Level 3"}`)
+	p := get()
+	if p.Info != "Front desk" || p.Location != "Level 3" || !p.IsShared || p.URI != uri {
+		t.Fatalf("omitted fields must be preserved, got %+v", p)
+	}
+
+	// Sharing is only turned off when asked
+	put(`{"shared":false}`)
+	if p := get(); p.IsShared || p.Info != "Front desk" || p.Location != "Level 3" {
+		t.Fatalf("expected only sharing to change, got %+v", p)
+	}
+}

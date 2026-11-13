@@ -157,11 +157,16 @@ type AddPrinterParams struct {
 }
 
 // ModifyPrinterParams holds fields for updating an existing print queue.
+//
+// Description, Location and Shared are pointers so that a field left out of the
+// request (nil: leave unchanged) can be told apart from a field deliberately set
+// to empty or false (clear it / stop sharing). An empty URI means "unchanged",
+// because a queue cannot exist without a device URI.
 type ModifyPrinterParams struct {
-	Description string `json:"description"`
-	URI         string `json:"uri"`
-	Location    string `json:"location"`
-	Shared      bool   `json:"shared"`
+	Description *string `json:"description"`
+	URI         string  `json:"uri"`
+	Location    *string `json:"location"`
+	Shared      *bool   `json:"shared"`
 }
 
 // DriverInfo describes an available printer driver/model.

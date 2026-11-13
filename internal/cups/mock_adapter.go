@@ -1174,13 +1174,15 @@ func (m *MockAdapter) ModifyPrinter(name string, params ModifyPrinterParams) err
 	if params.URI != "" {
 		p.URI = params.URI
 	}
-	if params.Description != "" {
-		p.Info = params.Description
+	if params.Description != nil {
+		p.Info = *params.Description
 	}
-	if params.Location != "" {
-		p.Location = params.Location
+	if params.Location != nil {
+		p.Location = *params.Location
 	}
-	p.IsShared = params.Shared
+	if params.Shared != nil {
+		p.IsShared = *params.Shared
+	}
 
 	return nil
 }

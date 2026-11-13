@@ -143,3 +143,56 @@ func TestCLIAdapterSetPrinterOptions(t *testing.T) {
 		t.Fatalf("SetPrinterOptions failed: %v", err)
 	}
 }
+
+func TestModifyPrinterArgs(t *testing.T) {
+	str := func(s string) *string { return &s }
+	boolean := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name   string
+		params ModifyPrinterParams
+		want   []string
+	}{
+		{
+			name:   "nothing supplied changes nothing",
+			params: ModifyPrinterParams{},
+			want:   []string{"-p", "Q"},
+		},
+		{
+			name:   "empty description and location are cleared, not skipped",
+			params: ModifyPrinterParams{Description: str(""), Location: str("")},
+			want:   []string{"-p", "Q", "-D", "", "-L", ""},
+		},
+		{
+			name:   "only the supplied field is sent",
+			params: ModifyPrinterParams{Location: str("Level 2")},
+			want:   []string{"-p", "Q", "-L", "Level 2"},
+		},
+		{
+			name:   "omitted sharing is left alone",
+			params: ModifyPrinterParams{Description: str("Front desk")},
+			want:   []string{"-p", "Q", "-D", "Front desk"},
+		},
+		{
+			name:   "sharing can be turned off explicitly",
+			params: ModifyPrinterParams{Shared: boolean(false)},
+			want:   []string{"-p", "Q", "-o", "printer-is-shared=false"},
+		},
+		{
+			name: "full save as sent by the settings screen",
+			params: ModifyPrinterParams{
+				URI:         "papercut:socket://192.168.1.50:9100",
+				Description: str("Front desk"),
+				Location:    str(""),
+				Shared:      boolean(true),
+			},
+			want: []string{"-p", "Q", "-v", "papercut:socket://192.168.1.50:9100", "-D", "Front desk", "-L", "", "-o", "printer-is-shared=true"},
+		},
+	}
+	for _, tc := range tests {
+		got := modifyPrinterArgs("Q", tc.params)
+		if strings.Join(got, "\x00") != strings.Join(tc.want, "\x00") {
+			t.Errorf("%s:\n got  %q\n want %q", tc.name, got, tc.want)
+		}
+	}
+}
