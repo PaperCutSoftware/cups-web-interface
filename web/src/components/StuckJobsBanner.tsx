@@ -1,5 +1,4 @@
 import React from 'react';
-import { AlertTriangle, XCircle } from 'lucide-react';
 import type { Job } from '../types/cups';
 
 interface StuckJobsBannerProps {
@@ -11,43 +10,33 @@ export const StuckJobsBanner: React.FC<StuckJobsBannerProps> = ({ stuckJobs, onC
   if (stuckJobs.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 mb-6 shadow-sm">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div className="flex items-start space-x-3">
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/60 rounded-lg text-amber-700 dark:text-amber-400 mt-0.5">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              {stuckJobs.length === 1
-                ? 'Stuck Print Job Detected'
-                : `${stuckJobs.length} Stuck Print Jobs Detected`}
-            </h2>
-            <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-0.5">
-              These jobs have been pending or processing for an unusually long time and may be blocking your printer queue.
-            </p>
-            <div className="mt-2 space-y-1">
-              {stuckJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center space-x-3 text-xs text-amber-900 dark:text-amber-200 bg-white/60 dark:bg-amber-900/20 px-2.5 py-1.5 rounded-md border border-amber-200/60 dark:border-amber-800/40"
-                >
-                  <span className="font-mono font-medium">#{job.id}</span>
-                  <span className="font-semibold truncate max-w-xs">{job.title}</span>
-                  <span className="text-amber-700 dark:text-amber-400">Queue: {job.printer}</span>
-                  <button
-                    onClick={() => onCancelJob(job.id)}
-                    className="ml-auto inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white font-medium transition cursor-pointer"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Cancel Job</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-4 border-l-red-600 dark:border-l-red-400 rounded-md px-4 py-3">
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        <strong className="font-semibold text-slate-900 dark:text-white">
+          {stuckJobs.length === 1 ? '1 print job looks stuck.' : `${stuckJobs.length} print jobs look stuck.`}
+        </strong>{' '}
+        {stuckJobs.length === 1 ? 'It has' : 'They have'} been pending or processing for an unusually long time and may
+        be blocking the queue.
+      </p>
+      <ul className="mt-2 divide-y divide-slate-200 dark:divide-slate-700">
+        {stuckJobs.map((job) => (
+          <li key={job.id} className="flex items-center gap-3 py-1.5 text-sm">
+            <span className="font-mono text-xs text-slate-500 dark:text-slate-400 shrink-0">#{job.id}</span>
+            <span className="font-semibold text-slate-900 dark:text-white truncate min-w-0" title={job.title}>
+              {job.title}
+            </span>
+            <span className="hidden sm:inline text-slate-500 dark:text-slate-400 truncate min-w-0">
+              on {job.printer}
+            </span>
+            <button
+              onClick={() => onCancelJob(job.id)}
+              className="ml-auto shrink-0 inline-flex items-center h-8 px-3 rounded-md text-sm font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400 transition-colors cursor-pointer"
+            >
+              Cancel job
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

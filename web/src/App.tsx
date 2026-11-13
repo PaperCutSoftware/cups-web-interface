@@ -14,12 +14,7 @@ import { LogsViewer } from './components/LogsViewer';
 import {
   Printer as PrinterIcon,
   CheckCircle2,
-  Clock,
-  Info,
   AlertCircle,
-  Cpu,
-  FileText,
-  Terminal,
 } from 'lucide-react';
 
 export function App() {
@@ -49,19 +44,24 @@ export function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Dark mode (defaults to light mode)
+  // Follow the system appearance until the user picks a theme with the toggle.
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('theme') === 'dark';
+    const stored = localStorage.getItem('theme');
+    if (stored === 'dark' || stored === 'light') {
+      return stored === 'dark';
+    }
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   });
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    setDarkMode(next);
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -252,7 +252,7 @@ export function App() {
         loading={loading}
         onRefresh={() => fetchData(false)}
         darkMode={darkMode}
-        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        onToggleDarkMode={toggleDarkMode}
         onOpenFleetAudit={() => setIsFleetAuditOpen(true)}
         rosettaRiskCount={rosettaRiskCount}
       />
@@ -293,148 +293,103 @@ export function App() {
           <StuckJobsBanner stuckJobs={stuckJobs} onCancelJob={handleCancelJob} />
         )}
 
-        {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs flex items-center space-x-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400">
-              <PrinterIcon className="w-6 h-6" />
+        {/* Summary strip */}
+        {(() => {
+          const pausedCount = printers.filter((p) => p.state === 'stopped').length;
+          const cell = 'px-5 py-4 min-w-0';
+          const label = 'text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400';
+          const value = 'font-semibold text-slate-900 dark:text-white mt-1 truncate';
+          const hint = 'text-xs text-slate-500 dark:text-slate-400';
+          const attention = 'text-xs font-semibold text-amber-600 dark:text-amber-400';
+          return (
+            <div className="grid grid-cols-2 lg:grid-cols-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md divide-slate-200 dark:divide-slate-700 max-lg:[&>*:nth-child(n+3)]:border-t max-lg:[&>*:nth-child(even)]:border-l lg:divide-x [&>*]:border-slate-200 dark:[&>*]:border-slate-700">
+              <div className={cell}>
+                <h2 className={label}>Print queues</h2>
+                <p className={`${value} text-2xl`}>{printers.length}</p>
+                <p className={pausedCount > 0 ? attention : hint}>
+                  {pausedCount > 0 ? `${pausedCount} paused` : 'All accepting jobs'}
+                </p>
+              </div>
+              <div className={cell}>
+                <h2 className={label}>Active jobs</h2>
+                <p className={`${value} text-2xl`}>{activeJobs.length}</p>
+                <p className={stuckJobs.length > 0 ? attention : hint}>
+                  {stuckJobs.length > 0 ? `${stuckJobs.length} stuck` : 'None stuck'}
+                </p>
+              </div>
+              <div className={cell}>
+                <h2 className={label}>Default printer</h2>
+                <p className={`${value} text-base leading-8`} title={status?.default_printer || 'None'}>
+                  {status?.default_printer || 'Not set'}
+                </p>
+                <p className={hint}>Used when no printer is chosen</p>
+              </div>
+              <div className={cell}>
+                <h2 className={label}>Print system</h2>
+                <p className={`${value} text-base leading-8`}>CUPS {status?.cups_version || '2.x'}</p>
+                <p className={status && !status.daemon_running ? 'text-xs font-semibold text-red-600 dark:text-red-400' : hint}>
+                  {status ? (status.daemon_running ? 'Running' : 'Not running') : 'Checking…'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Installed Printers</p>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                {printers.length}
-              </h2>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs flex items-center space-x-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-xl text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">System Default</p>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 truncate max-w-[160px]" title={status?.default_printer || 'None'}>
-                {status?.default_printer || 'Not configured'}
-              </h2>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs flex items-center space-x-4">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-xl text-amber-600 dark:text-amber-400">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Active Print Jobs</p>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                {activeJobs.length}
-              </h2>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs flex items-center space-x-4">
-            <div className="p-3 bg-purple-50 dark:bg-purple-950/50 rounded-xl text-purple-600 dark:text-purple-400">
-              <Info className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">CUPS Engine</p>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                {status?.cups_version || 'CUPS 2.x'}
-              </h2>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Top-Level Navigation Tabs */}
-        <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => setActiveTab('printers')}
-            className={`inline-flex items-center space-x-2.5 px-5 py-3 text-sm font-semibold transition cursor-pointer -mb-px rounded-t-xl ${
-              activeTab === 'printers'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-t border-x border-slate-200 dark:border-slate-700 border-b-2 border-b-blue-600 dark:border-b-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50 border-t border-x border-b-2 border-transparent'
-            }`}
-          >
-            <PrinterIcon className={`w-4 h-4 shrink-0 ${activeTab === 'printers' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
-            <span>Printers &amp; Queues</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs font-bold transition ${
-                activeTab === 'printers'
-                  ? 'bg-blue-100 text-blue-900 border border-blue-200 dark:bg-slate-700 dark:text-white dark:border dark:border-slate-600'
-                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
-              }`}
-            >
-              {printers.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('jobs')}
-            className={`inline-flex items-center space-x-2.5 px-5 py-3 text-sm font-semibold transition cursor-pointer -mb-px rounded-t-xl ${
-              activeTab === 'jobs'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-t border-x border-slate-200 dark:border-slate-700 border-b-2 border-b-blue-600 dark:border-b-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50 border-t border-x border-b-2 border-transparent'
-            }`}
-          >
-            <FileText className={`w-4 h-4 shrink-0 ${activeTab === 'jobs' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
-            <span>Print Jobs &amp; Document Queue</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs font-bold transition ${
-                activeTab === 'jobs'
-                  ? 'bg-blue-100 text-blue-900 border border-blue-200 dark:bg-slate-700 dark:text-white dark:border dark:border-slate-600'
-                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-slate-700'
-              }`}
-            >
-              {activeJobs.length}
-            </span>
-            {stuckJobs.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title={`${stuckJobs.length} stuck job(s)`} />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('logs')}
-            className={`inline-flex items-center space-x-2.5 px-5 py-3 text-sm font-semibold transition cursor-pointer -mb-px rounded-t-xl ${
-              activeTab === 'logs'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-t border-x border-slate-200 dark:border-slate-700 border-b-2 border-b-blue-600 dark:border-b-blue-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50 border-t border-x border-b-2 border-transparent'
-            }`}
-          >
-            <Terminal className={`w-4 h-4 shrink-0 ${activeTab === 'logs' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
-            <span>Logs &amp; Diagnostics</span>
-            {diagnosticIssueCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-600">
-                {diagnosticIssueCount}
-              </span>
-            )}
-          </button>
-        </div>
+        {(() => {
+          const tab = (active: boolean) =>
+            `inline-flex items-center gap-2 pt-2 pb-2.5 text-[15px] font-semibold border-b-[3px] -mb-px transition-colors cursor-pointer whitespace-nowrap ${
+              active
+                ? 'text-slate-900 dark:text-white border-blue-600 dark:border-blue-400'
+                : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white'
+            }`;
+          const count = 'text-sm font-normal text-slate-500 dark:text-slate-400';
+          const problem = 'text-sm font-semibold text-red-600 dark:text-red-400';
+          return (
+            <div className="flex items-center gap-7 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+              <button type="button" role="tab" onClick={() => setActiveTab('printers')} className={tab(activeTab === 'printers')}>
+                <span>Printers &amp; Queues</span>
+                <span className={count}>{printers.length}</span>
+              </button>
+              <button type="button" role="tab" onClick={() => setActiveTab('jobs')} className={tab(activeTab === 'jobs')}>
+                <span>Print Jobs</span>
+                {stuckJobs.length > 0 ? (
+                  <span className={problem} title={`${stuckJobs.length} stuck job(s)`}>
+                    {stuckJobs.length} stuck
+                  </span>
+                ) : (
+                  <span className={count}>{activeJobs.length}</span>
+                )}
+              </button>
+              <button type="button" role="tab" onClick={() => setActiveTab('logs')} className={tab(activeTab === 'logs')}>
+                <span>Logs &amp; Diagnostics</span>
+                {diagnosticIssueCount > 0 && (
+                  <span className={problem}>
+                    {diagnosticIssueCount} {diagnosticIssueCount === 1 ? 'issue' : 'issues'}
+                  </span>
+                )}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Tab 1: Printers & Queues Table View */}
         {activeTab === 'printers' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Printers &amp; Queues
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Manage physical devices, virtual proxies, PPD configurations, and queue status
-                </p>
-              </div>
-
-              {rosettaRiskCount > 0 && (
+            {rosettaRiskCount > 0 && (
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  {rosettaRiskCount} {rosettaRiskCount === 1 ? 'queue relies' : 'queues rely'} on Rosetta 2.
+                </span>{' '}
                 <button
+                  type="button"
                   onClick={() => setIsFleetAuditOpen(true)}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition cursor-pointer self-start sm:self-auto"
+                  className="font-semibold text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  <Cpu className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span>{rosettaRiskCount} {rosettaRiskCount === 1 ? 'queue relies' : 'queues rely'} on Rosetta 2</span>
+                  View the driver audit
                 </button>
-              )}
-            </div>
+              </p>
+            )}
 
             {loading && printers.length === 0 ? (
               <div className="h-64 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 animate-pulse" />
@@ -475,15 +430,6 @@ export function App() {
         {/* Tab 2: Print Jobs & Document Queue */}
         {activeTab === 'jobs' && (
           <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Print Jobs &amp; Document Queue
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Live monitoring of print spooler jobs with hold, release, restart, and cancellation controls
-              </p>
-            </div>
-
             <JobQueueTable
               activeJobs={activeJobs}
               completedJobs={completedJobs}

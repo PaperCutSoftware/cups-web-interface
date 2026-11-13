@@ -2,23 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Printer as PrinterIcon,
   Star,
-  Pause,
-  Play,
-  MapPin,
   Sliders,
   MoreVertical,
   Trash2,
   Search,
   CheckCircle2,
   AlertTriangle,
-  AlertCircle,
   RefreshCw,
   Plus,
-  Settings,
   Layers,
   Network,
   FileText,
-  Wrench,
 } from 'lucide-react';
 import type { Printer } from '../types/cups';
 import type { ConfigModalTab } from './PrinterConfigModal';
@@ -81,7 +75,8 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
   const isEnabledSince = (msg?: string) => {
     if (!msg) return false;
     const lower = msg.toLowerCase().trim();
-    return lower.startsWith('enabled since') || lower.startsWith('disabled since');
+    // These repeat what the status already says, so they are not shown again.
+    return lower.startsWith('enabled since') || lower.startsWith('disabled since') || lower === 'ready to print';
   };
 
   const handleToggleState = async (printer: Printer) => {
@@ -117,75 +112,51 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
     }
   };
 
+  // Status is shown as a dot and a word. Green means healthy; red means the queue needs attention.
   const getStateBadge = (state: string) => {
+    const healthy = 'bg-blue-600 dark:bg-blue-400';
+    const problem = 'bg-red-600 dark:bg-red-400';
     switch (state) {
       case 'idle':
-        return {
-          pill: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800',
-          dot: 'bg-emerald-500',
-          label: 'Ready',
-        };
+        return { dot: healthy, label: 'Ready' };
       case 'printing':
-        return {
-          pill: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800',
-          dot: 'bg-blue-500 animate-pulse',
-          label: 'Printing',
-        };
+        return { dot: `${healthy} animate-pulse`, label: 'Printing' };
       case 'stopped':
-        return {
-          pill: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800',
-          dot: 'bg-amber-500',
-          label: 'Paused',
-        };
+        return { dot: problem, label: 'Paused' };
       case 'error':
       default:
-        return {
-          pill: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800',
-          dot: 'bg-rose-500',
-          label: state === 'error' ? 'Error' : state,
-        };
+        return { dot: problem, label: state === 'error' ? 'Error' : state };
     }
   };
 
   const getArchBadge = (printer: Printer) => {
+    const plain = 'text-sm text-slate-600 dark:text-slate-300 group-hover:underline';
     if (!printer.arch_readiness) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          <span>Driver (PPD)</span>
-        </span>
-      );
+      return <span className={plain}>Driver (PPD)</span>;
     }
 
     const { status, label } = printer.arch_readiness;
     switch (status) {
       case 'universal':
       case 'native_arm64':
-        return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Universal (ARM64)</span>
-          </span>
-        );
+        return <span className={plain}>Universal</span>;
       case 'rosetta_dependent':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700">
-            <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>Rosetta 2 (x86_64)</span>
+          <span className="inline-flex flex-col items-start text-left">
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:underline">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Intel only</span>
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Needs Rosetta 2</span>
           </span>
         );
       case 'driverless':
-        return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span>Driverless</span>
-          </span>
-        );
+        return <span className={plain}>Driverless</span>;
       case 'missing_binary':
       default:
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <span>{label || 'Missing Binary'}</span>
+          <span className="text-sm font-semibold text-red-600 dark:text-red-400 group-hover:underline">
+            {label || 'Missing binary'}
           </span>
         );
     }
@@ -202,7 +173,7 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by queue name, driver, location, or URI..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            className="w-full h-9 pl-9 pr-4 rounded-md text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-blue-600/40 focus:border-blue-600"
           />
         </div>
 
@@ -210,40 +181,39 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
           <button
             type="button"
             onClick={onOpenServerSettings}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition cursor-pointer"
+            className="inline-flex items-center h-9 px-3.5 rounded-md text-sm font-semibold bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
             title="Configure CUPS daemon parameters (cupsctl)"
           >
-            <Settings className="w-3.5 h-3.5 text-slate-500" />
             <span>CUPS Settings</span>
           </button>
 
           <button
             type="button"
             onClick={onAddPrinter}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer whitespace-nowrap"
             title="Create a new CUPS printer queue"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             <span>Add Printer Queue</span>
           </button>
         </div>
       </div>
 
       {/* Main Table Container */}
-      <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 dark:bg-slate-900/60 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700/80">
-                <th className="py-3.5 px-4 sm:px-6">Queue / Printer</th>
-                <th className="hidden sm:table-cell py-3.5 px-4">Status</th>
-                <th className="hidden xl:table-cell py-3.5 px-4">Driver (PPD) &amp; Arch</th>
-                <th className="hidden lg:table-cell py-3.5 px-4">Location &amp; Connection</th>
-                <th className="hidden md:table-cell py-3.5 px-4 text-center">Jobs</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+              <tr className="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                <th className="py-3 px-4 sm:px-5">Queue</th>
+                <th className="hidden sm:table-cell py-3 px-4">Status</th>
+                <th className="hidden xl:table-cell py-3 px-4">Driver</th>
+                <th className="hidden lg:table-cell py-3 px-4">Location &amp; Connection</th>
+                <th className="hidden md:table-cell py-3 px-4 text-right">Jobs</th>
+                <th className="py-3 px-4 sm:px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {filteredPrinters.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-400">
@@ -268,15 +238,12 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
                     >
                       {/* Queue / Printer Name Column: takes the remaining width and truncates,
                           so long queue names never push the Actions column out of view */}
-                      <td className="py-4 px-4 sm:px-6 w-full max-w-0">
+                      <td className="py-3 px-4 sm:px-5 w-full max-w-0 align-top">
                         <div className="flex items-center space-x-3 min-w-[11rem]">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                            <PrinterIcon className="w-5 h-5" />
-                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                               <span
-                                className="font-bold text-sm text-slate-900 dark:text-white truncate min-w-0 max-w-full"
+                                className="font-semibold text-[15px] font-[family-name:var(--font-display)] text-slate-900 dark:text-white truncate min-w-0 max-w-full"
                                 title={printer.name}
                               >
                                 {printer.name}
@@ -284,88 +251,85 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
 
                               {/* Compact Status Indicator for screens where Status column is hidden (< sm) */}
                               <span
-                                className={`sm:hidden inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${stateStyle.pill}`}
+                                className="sm:hidden inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0"
                               >
-                                <span className={`w-1.5 h-1.5 rounded-full ${stateStyle.dot}`} />
+                                <span className={`w-2 h-2 rounded-full ${stateStyle.dot}`} />
                                 <span>{stateStyle.label}</span>
                               </span>
 
                               {printer.is_default && (
-                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
-                                  <Star className="w-2.5 h-2.5 fill-current" />
-                                  <span>Default</span>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0">
+                                  Default
                                 </span>
                               )}
 
                               {printer.is_class && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 shrink-0">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0">
                                   Pool
                                 </span>
                               )}
                             </div>
 
                             <p
-                              className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-xs sm:max-w-sm"
+                              className="text-[13px] text-slate-500 dark:text-slate-400 truncate"
                               title={printer.info || printer.name}
                             >
                               {printer.info || printer.name}
                             </p>
 
-                            {/* Alerts / Warnings if any */}
+                            {/* Alerts as one line of text: red for errors, orange for warnings */}
                             {printer.alerts && printer.alerts.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {printer.alerts.map((alert) => {
+                              <p className="text-[13px] mt-0.5 truncate">
+                                {printer.alerts.map((alert, index) => {
                                   const { label, severity } = formatAlert(alert);
-                                  const color =
-                                    severity === 'error'
-                                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-900/60'
-                                      : 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-900/60';
                                   return (
                                     <span
                                       key={alert}
-                                      className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${color}`}
+                                      className={
+                                        severity === 'error'
+                                          ? 'text-red-600 dark:text-red-400'
+                                          : 'text-amber-600 dark:text-amber-400'
+                                      }
                                     >
-                                      <AlertCircle className="w-2.5 h-2.5 shrink-0" />
-                                      <span>{label}</span>
+                                      {index > 0 && <span className="text-slate-400"> · </span>}
+                                      {label}
                                     </span>
                                   );
                                 })}
-                              </div>
+                              </p>
                             )}
                           </div>
                         </div>
                       </td>
 
                       {/* Status Column: Hidden on < sm */}
-                      <td className="hidden sm:table-cell py-4 px-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1">
-                          <span
-                            className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${stateStyle.pill}`}
-                          >
-                            <span className={`w-2 h-2 rounded-full ${stateStyle.dot}`} />
-                            <span>{stateStyle.label}</span>
-                          </span>
-
-                          {printer.diagnostic && (
-                            <span
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300 border border-red-200 dark:border-red-800"
-                              title={`${printer.diagnostic.title}: ${printer.diagnostic.explanation}`}
-                            >
-                              <Wrench className="w-2.5 h-2.5 shrink-0" />
-                              <span className="truncate max-w-[130px]">{printer.diagnostic.title}</span>
-                            </span>
-                          )}
-
-                          {printer.state_message && !isEnabledSince(printer.state_message) && !printer.diagnostic && (
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-[140px] truncate" title={printer.state_message}>
-                              {printer.state_message}
-                            </p>
-                          )}
+                      <td className="hidden sm:table-cell py-3 px-4 whitespace-nowrap align-top">
+                        <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${stateStyle.dot}`} />
+                          <span>{stateStyle.label}</span>
                         </div>
+
+                        {printer.diagnostic && (
+                          <p
+                            className="ml-4 text-[13px] text-red-600 dark:text-red-400 truncate max-w-[170px]"
+                            title={`${printer.diagnostic.title}: ${printer.diagnostic.explanation}`}
+                          >
+                            {printer.diagnostic.title}
+                          </p>
+                        )}
+
+                        {printer.state_message && !isEnabledSince(printer.state_message) && !printer.diagnostic && (
+                          <p
+                            className="ml-4 text-[13px] text-slate-500 dark:text-slate-400 max-w-[170px] truncate"
+                            title={printer.state_message}
+                          >
+                            {printer.state_message}
+                          </p>
+                        )}
                       </td>
 
                       {/* Driver (PPD) & Arch Readiness: Hidden on < xl */}
-                      <td className="hidden xl:table-cell py-4 px-4 whitespace-nowrap">
+                      <td className="hidden xl:table-cell py-3 px-4 whitespace-nowrap align-top">
                         <button
                           type="button"
                           onClick={() => onConfigure(printer, 'audit')}
@@ -377,15 +341,14 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
                       </td>
 
                       {/* Location & Connection Column: Hidden on < lg */}
-                      <td className="hidden lg:table-cell py-4 px-4">
-                        <div className="flex items-center space-x-1.5 text-xs text-slate-700 dark:text-slate-300">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[160px]" title={printer.location || 'Local'}>
-                            {printer.location || 'Local / Direct'}
+                      <td className="hidden lg:table-cell py-3 px-4 align-top">
+                        <div className="text-sm text-slate-600 dark:text-slate-300">
+                          <span className="block truncate max-w-[240px]" title={printer.location || 'Not set'}>
+                            {printer.location || 'Not set'}
                           </span>
                         </div>
                         <div
-                          className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[180px]"
+                          className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate max-w-[240px]"
                           title={printer.uri}
                         >
                           {printer.uri}
@@ -393,44 +356,35 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
                       </td>
 
                       {/* Jobs Column: Hidden on < md */}
-                      <td className="hidden md:table-cell py-4 px-4 text-center whitespace-nowrap">
+                      <td className="hidden md:table-cell py-3 px-4 text-right whitespace-nowrap align-top tabular-nums text-sm">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          className={
                             printer.queued_jobs_count > 0
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                          }`}
+                              ? 'font-semibold text-slate-900 dark:text-white'
+                              : 'text-slate-500 dark:text-slate-400'
+                          }
+                          title={`${printer.queued_jobs_count} ${printer.queued_jobs_count === 1 ? 'job' : 'jobs'} queued`}
                         >
-                          {printer.queued_jobs_count} {printer.queued_jobs_count === 1 ? 'job' : 'jobs'}
+                          {printer.queued_jobs_count}
                         </span>
                       </td>
 
                       {/* Actions Column: Always visible */}
-                      <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
+                      <td className="py-2.5 px-4 sm:px-5 text-right whitespace-nowrap align-top">
                         <div className="inline-flex items-center space-x-2">
                           {/* Inline Pause / Resume Toggle */}
                           <button
                             type="button"
                             onClick={() => handleToggleState(printer)}
                             disabled={actionLoading === printer.name}
-                            className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                            className={`inline-flex items-center justify-center h-8 min-w-[4.5rem] px-3 rounded-md text-[13px] font-semibold transition-colors cursor-pointer ${
                               printer.state === 'stopped'
-                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-blue-600 dark:hover:border-blue-400'
+                                : 'text-blue-700 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/60'
                             }`}
                             title={printer.state === 'stopped' ? 'Resume printer queue' : 'Pause printer queue'}
                           >
-                            {printer.state === 'stopped' ? (
-                              <>
-                                <Play className="w-3.5 h-3.5 fill-current" />
-                                <span>Resume</span>
-                              </>
-                            ) : (
-                              <>
-                                <Pause className="w-3.5 h-3.5" />
-                                <span>Pause</span>
-                              </>
-                            )}
+                            {printer.state === 'stopped' ? 'Resume' : 'Pause'}
                           </button>
 
                           {/* Kebab Menu Container */}
@@ -438,7 +392,7 @@ export const PrinterTable: React.FC<PrinterTableProps> = ({
                             <button
                               type="button"
                               onClick={() => setActiveKebab(isMenuOpen ? null : printer.name)}
-                              className="p-1.5 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                              className="p-2 rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
                               title="More options"
                             >
                               <MoreVertical className="w-4 h-4" />

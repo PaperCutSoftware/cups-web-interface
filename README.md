@@ -2,12 +2,12 @@
 
 **Web interface for CUPS**: a modern, lightweight, single-binary replacement for the legacy CUPS web interface (`localhost:631`) on macOS.
 
-![The CUPS webui dashboard in mock mode, showing the summary tiles and the printers and queues table](./docs/screenshot.png)
+![The CUPS webui dashboard in mock mode, showing the summary strip and the printers and queues table](./docs/screenshot.png)
 
 Designed specifically to address UX barriers in macOS and UNIX environments:
 - **Zero Configuration Access**: Bypasses the requirement to run `cupsctl WebInterface=yes` in Terminal.
 - **Human-Centric UX**: Replaces technical abstractions (*PPDs*, *Classes*) with clear workflows (*Printers*, *Print Queues*, *Printer Pools*).
-- **Modern Responsive Interface**: Clean, dark/light mode dashboard built with Tailwind CSS and Lucide icons.
+- **Modern Responsive Interface**: Clean dashboard that follows your Mac's light or dark appearance, built with Tailwind CSS and Lucide icons.
 - **Queue Diagnostics & Stuck Job Remediation**: Identifies stuck print jobs and provides instant one-click cancellation.
 - **Security-First**: Binds to loopback `127.0.0.1:6310` by default, and signs in only the macOS user who runs it. See [SECURITY.md](./SECURITY.md).
 
@@ -106,4 +106,4 @@ The security model is described in [SECURITY.md](./SECURITY.md). Please report s
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE). Bundled fonts are covered by their own licences; see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

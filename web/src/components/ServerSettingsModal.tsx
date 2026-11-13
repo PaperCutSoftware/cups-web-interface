@@ -166,7 +166,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
               <div className="space-y-4">
                 {/* Setting 1: Share Printers */}
                 <div className="flex items-start space-x-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-                  <Share2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <Share2 className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <label className="text-xs font-semibold text-slate-900 dark:text-white block cursor-pointer">
                       Share connected printers on the local network
@@ -208,7 +208,7 @@ export const ServerSettingsModal: React.FC<ServerSettingsModalProps> = ({
 
                 {/* Setting 3: Debug Logging */}
                 <div className="flex items-start space-x-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-                  <FileCode className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <FileCode className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <label className="text-xs font-semibold text-slate-900 dark:text-white block cursor-pointer">
                       Save debugging information for troubleshooting (Debug Logging)
