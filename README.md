@@ -30,6 +30,9 @@ To have the interface start automatically in the background on login:
 # Install the service and start it immediately
 ./bin/cups-webui launchagent install
 
+# Or install it on a different port
+./bin/cups-webui launchagent install -port 8631
+
 # Check service status
 ./bin/cups-webui launchagent status
 
@@ -37,7 +40,7 @@ To have the interface start automatically in the background on login:
 ./bin/cups-webui launchagent uninstall
 ```
 
-The install command copies the binary to `~/Library/Application Support/cups-webui/` and starts the service straight away. Open `http://127.0.0.1:6310` in your browser and bookmark it.
+The install command copies the binary to `~/Library/Application Support/cups-webui/` and starts the service straight away. Open `http://127.0.0.1:6310` in your browser and bookmark it (or the port you chose with `-port`). Installing the service from the web interface uses the port that instance is running on.
 
 ### 3. Run in Mock Mode (For Testing / Demo)
 Runs with simulated printers, queues, and diagnostic alerts without requiring active printer hardware:

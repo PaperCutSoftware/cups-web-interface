@@ -64,7 +64,7 @@ Usage:
   cups-webui launchagent <command>    Manage the macOS background LaunchAgent service
 
 LaunchAgent Commands:
-  install                             Generate plist and register cups-webui to launch on login
+  install [-port <int>]               Generate plist and register cups-webui to launch on login (default port 6310)
   uninstall                           Unload and remove the cups-webui LaunchAgent
   status                              Display current LaunchAgent installation and execution status
 
@@ -93,7 +93,9 @@ func runServer() {
 		adapter = cups.NewMockAdapter()
 	} else {
 		log.Println("[INFO] Initializing with live CUPS CLI adapter")
-		adapter = cups.NewCLIAdapter()
+		cli := cups.NewCLIAdapter()
+		cli.ListenPort = *port
+		adapter = cli
 	}
 
 	token := getOrGenerateSessionToken()
@@ -210,14 +212,21 @@ func handleLaunchAgentCommand(args []string) {
 
 	switch action {
 	case "install":
-		port := 6310
-		if err := macos.Install(binPath, port, "127.0.0.1"); err != nil {
+		fs := flag.NewFlagSet("launchagent install", flag.ExitOnError)
+		port := fs.Int("port", 6310, "Port the background service listens on")
+		_ = fs.Parse(args[1:])
+		if *port < 1 || *port > 65535 {
+			fmt.Printf("Error installing LaunchAgent: invalid port %d (expected 1-65535)\n", *port)
+			os.Exit(1)
+		}
+		if err := macos.Install(binPath, *port, "127.0.0.1"); err != nil {
 			fmt.Printf("Error installing LaunchAgent: %v\n", err)
 			os.Exit(1)
 		}
 		plistPath, _ := macos.GetPlistPath()
 		fmt.Println("✅ CUPS webui macOS LaunchAgent successfully installed and registered!")
 		fmt.Printf("   Plist location: %s\n", plistPath)
+		fmt.Printf("   Address:        http://127.0.0.1:%d\n", *port)
 		fmt.Println("   cups-webui will automatically start whenever you log into macOS.")
 
 	case "uninstall":

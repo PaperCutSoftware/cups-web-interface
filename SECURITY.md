@@ -18,7 +18,7 @@ Include the affected version or commit, steps to reproduce, and the impact you o
 * **DNS Rebinding Protection:** Every incoming HTTP request must supply a valid loopback `Host` header (`127.0.0.1`, `localhost`, or `[::1]`). Requests routed via external hostnames or DNS rebinding domains are terminated with `400 Bad Request`.
 * **CSRF & Cross-Site Defense:** 
   * State-modifying requests (`POST`, `PUT`, `DELETE`) inspect modern browser metadata (`Sec-Fetch-Site`) and block all cross-site requests with `403 Forbidden`.
-  * Origin headers are strictly whitelisted to loopback origins (`http://127.0.0.1:*` and `http://localhost:*`).
+  * Origin headers must match the exact address the interface is served on (same host and port). Pages on other loopback ports are treated as cross-origin: they receive no CORS access and cannot obtain the session token.
 * **CORS Lockdown on Event Streams:** Server-Sent Events (`/api/v1/events`) do not permit wildcard or cross-origin access, preventing malicious third-party websites from eavesdropping on print jobs, document titles, or queue state.
 
 ---
