@@ -50,26 +50,30 @@ func (s *Server) isAllowedHost(hostHeader string) bool {
 	}
 }
 
-// isAllowedOrigin checks if the given origin is a local loopback origin.
-func (s *Server) isAllowedOrigin(origin string) bool {
+// isAllowedOrigin checks that origin (an Origin or Referer header value) is the
+// address this request was served on: same host and same port. Other loopback
+// ports are different origins and are not trusted, because any local web
+// server (or another user's) could otherwise ask for the session token.
+// The comparison uses the request's Host header, so any -port value works.
+func (s *Server) isAllowedOrigin(r *http.Request, origin string) bool {
 	if origin == "" {
 		return true
 	}
 	u, err := url.Parse(origin)
-	if err != nil {
+	if err != nil || u.Host == "" {
 		return false
 	}
-	host := u.Hostname()
-	switch strings.ToLower(host) {
-	case "127.0.0.1", "localhost", "::1":
+	if strings.EqualFold(u.Host, r.Host) {
 		return true
-	default:
-		// Also allow dev server if CUPS_WEBUI_DEV is set
-		if os.Getenv("CUPS_WEBUI_DEV") != "" && (host == "localhost" || host == "127.0.0.1") {
+	}
+	// The Vite dev server (npm run dev) proxies API calls from port 3000.
+	if os.Getenv("CUPS_WEBUI_DEV") != "" {
+		switch strings.ToLower(u.Host) {
+		case "localhost:3000", "127.0.0.1:3000":
 			return true
 		}
-		return false
 	}
+	return false
 }
 
 // isAuthenticated checks whether an incoming request has provided a valid session token.
@@ -124,7 +128,7 @@ func (s *Server) securityMiddleware(next http.Handler) http.Handler {
 
 		// 2. CORS Defense: Only allow loopback origins
 		if origin != "" {
-			if s.isAllowedOrigin(origin) {
+			if s.isAllowedOrigin(r, origin) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-CUPS-WebUI-Token")
@@ -166,8 +170,8 @@ func (s *Server) securityMiddleware(next http.Handler) http.Handler {
 			// Direct browser navigation to root from trusted loopback host
 			secFetchSite := r.Header.Get("Sec-Fetch-Site")
 			referer := r.Header.Get("Referer")
-			refererOk := referer == "" || s.isAllowedOrigin(referer)
-			if secFetchSite != "cross-site" && refererOk && (origin == "" || s.isAllowedOrigin(origin)) && s.isTrustedPeer(r) {
+			refererOk := referer == "" || s.isAllowedOrigin(r, referer)
+			if secFetchSite != "cross-site" && refererOk && (origin == "" || s.isAllowedOrigin(r, origin)) && s.isTrustedPeer(r) {
 				shouldSetCookie = true
 			}
 		}
@@ -233,13 +237,13 @@ func (s *Server) handleAuthSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	origin := r.Header.Get("Origin")
-	if origin != "" && !s.isAllowedOrigin(origin) {
+	if origin != "" && !s.isAllowedOrigin(r, origin) {
 		writeError(w, http.StatusForbidden, "unauthorized origin")
 		return
 	}
 
 	referer := r.Header.Get("Referer")
-	if referer != "" && !s.isAllowedOrigin(referer) {
+	if referer != "" && !s.isAllowedOrigin(r, referer) {
 		writeError(w, http.StatusForbidden, "unauthorized referer")
 		return
 	}

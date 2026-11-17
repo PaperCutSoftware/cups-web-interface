@@ -787,6 +787,39 @@ func TestSecurityCORSAndRemoteOrigins(t *testing.T) {
 	if wLocal.Header().Get("Access-Control-Allow-Origin") != "http://127.0.0.1:6310" {
 		t.Errorf("expected Access-Control-Allow-Origin to match loopback origin, got %q", wLocal.Header().Get("Access-Control-Allow-Origin"))
 	}
+
+	// A different port on loopback is a different origin: it must not be granted
+	// CORS access or be handed the session token, even on a trusted connection.
+	for _, other := range []string{"http://127.0.0.1:8080", "http://localhost:6310", "http://localhost:3000"} {
+		reqOther := httptest.NewRequest("POST", "/api/v1/auth/session", nil)
+		reqOther.Host = "127.0.0.1:6310"
+		reqOther.Header.Set("Origin", other)
+		reqOther.Header.Set("X-Requested-With", "CUPS-WebUI")
+		wOther := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(wOther, reqOther)
+
+		if wOther.Code != http.StatusForbidden {
+			t.Errorf("origin %s: expected 403 Forbidden, got %d", other, wOther.Code)
+		}
+		if got := wOther.Header().Get("Access-Control-Allow-Origin"); got != "" {
+			t.Errorf("origin %s: expected no Access-Control-Allow-Origin, got %q", other, got)
+		}
+		if strings.Contains(wOther.Body.String(), srv.Token()) {
+			t.Errorf("origin %s: session token leaked in response", other)
+		}
+	}
+
+	// The same check follows a custom port.
+	reqPort := httptest.NewRequest("POST", "/api/v1/auth/session", nil)
+	reqPort.Host = "127.0.0.1:8631"
+	reqPort.Header.Set("Origin", "http://127.0.0.1:8631")
+	reqPort.Header.Set("X-Requested-With", "CUPS-WebUI")
+	reqPort.Header.Set("X-CUPS-WebUI-Token", srv.Token())
+	wPort := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(wPort, reqPort)
+	if wPort.Code != http.StatusOK {
+		t.Errorf("expected 200 for same-origin request on a custom port, got %d", wPort.Code)
+	}
 }
 
 func TestSecurityAuthentication(t *testing.T) {
