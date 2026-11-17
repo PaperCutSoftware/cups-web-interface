@@ -37,6 +37,10 @@ func cleanCUPSError(errStr string) string {
 // CLIAdapter communicates with CUPS using macOS/Linux standard CLI commands.
 type CLIAdapter struct {
 	timeout time.Duration
+
+	// ListenPort is the port this server runs on. A LaunchAgent installed from
+	// the web interface is registered on the same port. Zero means 6310.
+	ListenPort int
 }
 
 // NewCLIAdapter creates a new CLI-based CUPS adapter.
@@ -1282,7 +1286,11 @@ func (a *CLIAdapter) ManageLaunchAgent(action string) error {
 	}
 	switch strings.ToLower(action) {
 	case "install":
-		return macos.Install(binPath, 6310, "127.0.0.1")
+		port := a.ListenPort
+		if port == 0 {
+			port = 6310
+		}
+		return macos.Install(binPath, port, "127.0.0.1")
 	case "uninstall":
 		return macos.Uninstall()
 	default:
