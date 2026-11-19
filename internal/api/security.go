@@ -190,6 +190,20 @@ func (s *Server) securityMiddleware(next http.Handler) http.Handler {
 		//   - mutating requests always require the session token, plus CSRF defense
 		//   - read requests require either the token or a connection owned by the
 		//     user running this server, so other local users cannot read queue data
+		// Browsers mark where a request came from. The interface only calls the
+		// API from its own pages (same-origin); a request marked as coming from
+		// another site, or another localhost port (same-site), is refused for
+		// every method, so other pages can't make the server run CUPS commands.
+		// Requests without the header (curl, scripts) are judged by the rules below.
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			switch r.Header.Get("Sec-Fetch-Site") {
+			case "", "same-origin", "none":
+			default:
+				writeError(w, http.StatusForbidden, "cross-site request blocked")
+				return
+			}
+		}
+
 		if strings.HasPrefix(r.URL.Path, "/api/v1/") && r.URL.Path != "/api/v1/auth/session" {
 			if r.URL.Path != "/api/v1/auth/status" && !s.isAuthenticated(r) && !s.isTrustedPeer(r) {
 				writeError(w, http.StatusUnauthorized, "unauthorized: valid session token required")
