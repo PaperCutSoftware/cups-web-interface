@@ -478,16 +478,36 @@ func (a *CLIAdapter) GetPrinterOptions(name string) (*PrinterOptionsResponse, er
 	}
 
 	resp := ParseLpoptionsOutput(name, out)
-	// Group by the PPD's own InstallableOptions group when the PPD can be read;
-	// the keyword guess in ParseLpoptionsOutput misses names such as OptTray2.
 	if path := FindPPDFile(name); path != "" {
 		if data, err := readLimited(path); err == nil {
-			if ppd := ParsePPDSummary(data); ppd.HasInstallableGroup {
+			ppd := ParsePPDSummary(data)
+			// Group by the PPD's own InstallableOptions group; the keyword
+			// guess in ParseLpoptionsOutput misses names such as OptTray2.
+			if ppd.HasInstallableGroup {
 				RegroupByInstallable(resp, ppd)
 			}
+			ApplyPPDChoiceLabels(resp, ppd)
 		}
 	}
 	return resp, nil
+}
+
+// ApplyPPDChoiceLabels replaces choice names with the PPD's readable labels.
+// `lpoptions -l` only prints choice names (e.g. "PrinterS"); the PPD has the
+// label the print dialog shows ("Use Printer Setting").
+func ApplyPPDChoiceLabels(resp *PrinterOptionsResponse, ppd *PPDSummary) {
+	apply := func(opts []PrinterOption) {
+		for i := range opts {
+			for j := range opts[i].Choices {
+				c := &opts[i].Choices[j]
+				if l := ppd.ChoiceLabel(opts[i].Key, c.Name); l != "" && l != c.Name {
+					c.Label = l
+				}
+			}
+		}
+	}
+	apply(resp.General)
+	apply(resp.Accessories)
 }
 
 // RegroupByInstallable puts exactly the options in the PPD's InstallableOptions

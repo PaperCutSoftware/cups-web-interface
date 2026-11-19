@@ -3,6 +3,7 @@ package cups
 import (
 	"bytes"
 	"strings"
+	"unicode/utf8"
 )
 
 // maxPPDSize caps how much of a PPD is parsed. Real PPDs are well under 2 MB.
@@ -29,6 +30,14 @@ type PPDSummary struct {
 	// AirPrint / IPP Everywhere queue.
 	Driverless  bool
 	Installable []PPDInstallableOption
+	// ChoiceLabels holds the readable label of every choice of every UI
+	// option, e.g. ChoiceLabels["StapleJob"]["PrinterS"] = "Use Printer Setting".
+	ChoiceLabels map[string]map[string]string
+}
+
+// ChoiceLabel returns the PPD's label for an option's choice, or "".
+func (s *PPDSummary) ChoiceLabel(key, choice string) string {
+	return s.ChoiceLabels[key][choice]
 }
 
 // DriverNames returns the names CUPS may list this driver under (lpinfo
@@ -77,9 +86,10 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	data = bytes.ReplaceAll(data, []byte("\r"), []byte("\n"))
 
-	s := &PPDSummary{}
+	s := &PPDSummary{ChoiceLabels: map[string]map[string]string{}}
 	inGroup := false
 	var current *PPDInstallableOption
+	uiKey := "" // the open *OpenUI option, in any group
 	inQuoted := false
 	defaults := map[string]string{}
 
@@ -147,7 +157,7 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 			}
 			continue
 		case "*OpenUI", "*JCLOpenUI":
-			if !inGroup || option == "" {
+			if option == "" {
 				continue
 			}
 			key, label, _ := strings.Cut(strings.TrimPrefix(option, "*"), "/")
@@ -155,7 +165,14 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 			if key == "" {
 				continue
 			}
-			label = decodePPDText(strings.TrimSpace(label))
+			uiKey = key
+			if s.ChoiceLabels[key] == nil {
+				s.ChoiceLabels[key] = map[string]string{}
+			}
+			if !inGroup {
+				continue
+			}
+			label = ppdLabel(label)
 			if label == "" {
 				label = key
 			}
@@ -168,6 +185,7 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 			continue
 		case "*CloseUI", "*JCLCloseUI":
 			current = nil
+			uiKey = ""
 			continue
 		}
 
@@ -177,15 +195,18 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 			continue
 		}
 
-		// *OptStapler True/Installed: ""
-		if current != nil && option != "" && mainKey == "*"+current.Key {
+		// *StapleJob PrinterS/Use Printer Setting: ""
+		if uiKey != "" && option != "" && mainKey == "*"+uiKey {
 			name, label, _ := strings.Cut(option, "/")
 			name = strings.TrimSpace(name)
-			label = decodePPDText(strings.TrimSpace(label))
+			label = ppdLabel(label)
 			if label == "" {
 				label = name
 			}
-			current.Choices = append(current.Choices, OptionChoice{Name: name, Label: label})
+			s.ChoiceLabels[uiKey][name] = label
+			if current != nil && current.Key == uiKey {
+				current.Choices = append(current.Choices, OptionChoice{Name: name, Label: label})
+			}
 		}
 	}
 
@@ -213,6 +234,21 @@ func splitPPDLine(line string) (keyword, value string, ok bool) {
 		return line, "", false
 	}
 	return strings.TrimSpace(line[:idx]), strings.TrimSpace(line[idx+1:]), true
+}
+
+// ppdLabel turns a PPD translation string into display text: hex escapes
+// decoded, and legacy ISO-8859-1 text (common in older PPDs) converted to
+// UTF-8 so it doesn't show as replacement characters.
+func ppdLabel(raw string) string {
+	s := decodePPDText(strings.TrimSpace(raw))
+	if utf8.ValidString(s) {
+		return s
+	}
+	runes := make([]rune, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		runes = append(runes, rune(s[i]))
+	}
+	return string(runes)
 }
 
 // decodePPDText decodes hexadecimal substrings in a PPD translation string,

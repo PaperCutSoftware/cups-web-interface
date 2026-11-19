@@ -797,6 +797,44 @@ func TestAccessorySuggestions(t *testing.T) {
 	}
 }
 
+func TestPPDChoiceLabels(t *testing.T) {
+	ppd := ParsePPDSummary([]byte(samplePPD))
+	if got := ppd.ChoiceLabel("StapleJob", "PrinterS"); got != "Printer Setting" {
+		t.Errorf("StapleJob PrinterS = %q", got)
+	}
+	if got := ppd.ChoiceLabel("OptStapler", "True"); got != "Installed" {
+		t.Errorf("OptStapler True = %q", got)
+	}
+	if got := ppd.ChoiceLabel("OptTray2", "Bogus"); got != "" {
+		t.Errorf("a line inside a quoted value must not become a choice: %q", got)
+	}
+	resp := ParseLpoptionsOutput("Q", "StapleJob/Staple Job: *PrinterS TopLeft Unknown\nOptStapler/Staple: *False True\n")
+	ApplyPPDChoiceLabels(resp, ppd)
+	labels := map[string]string{}
+	for _, o := range append(resp.General, resp.Accessories...) {
+		for _, c := range o.Choices {
+			labels[o.Key+"="+c.Name] = c.Label
+		}
+	}
+	want := map[string]string{
+		"StapleJob=PrinterS": "Printer Setting",
+		"StapleJob=TopLeft":  "Top Left",
+		"StapleJob=Unknown":  "Unknown", // not in the PPD: keep the name
+		"OptStapler=True":    "Installed",
+		"OptStapler=False":   "Not Installed",
+	}
+	for k, v := range want {
+		if labels[k] != v {
+			t.Errorf("%s = %q, want %q", k, labels[k], v)
+		}
+	}
+	// Legacy ISO-8859-1 labels become valid UTF-8.
+	latin := ParsePPDSummary([]byte("*PPD-Adobe: \"4.3\"\n*OpenUI *Q/Qualit\xe9: PickOne\n*Q Haute/Haute qualit\xe9: \"\"\n*CloseUI: *Q\n"))
+	if got := latin.ChoiceLabel("Q", "Haute"); got != "Haute qualité" {
+		t.Errorf("latin-1 label = %q", got)
+	}
+}
+
 func TestRegroupByInstallable(t *testing.T) {
 	resp := ParseLpoptionsOutput("Q", "OptTray2/Tray 2: *False True\nOptStapler/Staple: *False True\nStapleJob/Staple Job: *PrinterS TopLeft\nPageSize/Media Size: *A4 Letter\n")
 	RegroupByInstallable(resp, ParsePPDSummary([]byte(samplePPD)))
