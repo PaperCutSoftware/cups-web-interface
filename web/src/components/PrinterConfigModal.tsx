@@ -52,6 +52,8 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
   const [options, setOptions] = useState<PrinterOptionsResponse | null>(null);
   const [audit, setAudit] = useState<ArchAuditResult | null>(null);
   const [accessoryReport, setAccessoryReport] = useState<AccessoryReport | null>(null);
+  // Bumped after a driver swap so the accessories tab remounts with the new PPD's options.
+  const [accessoryPanelVersion, setAccessoryPanelVersion] = useState(0);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -111,15 +113,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
       .then(([optsData, auditData, accessoryData]) => {
         setAccessoryReport(accessoryData);
         if (optsData) {
-          setOptions(optsData);
-          const initialValues: Record<string, string> = {};
-          optsData.general.forEach((opt) => {
-            initialValues[opt.key] = opt.current_value || opt.default_value;
-          });
-          optsData.accessories.forEach((opt) => {
-            initialValues[opt.key] = opt.current_value || opt.default_value;
-          });
-          setFormValues(initialValues);
+          applyOptions(optsData);
         }
         if (auditData) {
           setAudit(auditData);
@@ -132,6 +126,18 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
         setLoading(false);
       });
   }, [isOpen, printer]);
+
+  function applyOptions(optsData: PrinterOptionsResponse) {
+    setOptions(optsData);
+    const initialValues: Record<string, string> = {};
+    optsData.general.forEach((opt) => {
+      initialValues[opt.key] = opt.current_value || opt.default_value;
+    });
+    optsData.accessories.forEach((opt) => {
+      initialValues[opt.key] = opt.current_value || opt.default_value;
+    });
+    setFormValues(initialValues);
+  }
 
   // Lazy load drivers when driver tab is selected
   useEffect(() => {
@@ -246,9 +252,17 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
       }
       await api.setPrinterDriver(printer.name, targetDriver);
       setSuccessMessage(`Driver updated to "${targetDriver}"!`);
-      // Reload audit
-      const updatedAudit = await api.getPrinterAudit(printer.name);
+      // The new PPD changes the audit, the default options and the
+      // accessories (manual values were re-applied by the server): reload all.
+      const [updatedAudit, updatedOptions, updatedAccessories] = await Promise.all([
+        api.getPrinterAudit(printer.name),
+        api.getPrinterOptions(printer.name).catch(() => null),
+        api.getAccessories(printer.name).catch(() => null),
+      ]);
       setAudit(updatedAudit);
+      if (updatedOptions) applyOptions(updatedOptions);
+      setAccessoryReport(updatedAccessories);
+      setAccessoryPanelVersion((v) => v + 1);
       if (onSaveSuccess) onSaveSuccess();
       setTimeout(() => setSuccessMessage(null), 3500);
     } catch (err) {
@@ -483,8 +497,9 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
           ) : activeTab === 'accessories' ? (
             /* Tab 2: Hardware Accessories (installable options) */
             <AccessoriesPanel
-              key={printer.name}
+              key={`${printer.name}-${accessoryPanelVersion}`}
               printerName={printer.name}
+              initialReport={accessoryReport}
               onChanged={onSaveSuccess}
               onReport={setAccessoryReport}
             />

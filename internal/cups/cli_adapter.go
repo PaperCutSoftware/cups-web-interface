@@ -478,16 +478,16 @@ func (a *CLIAdapter) GetPrinterOptions(name string) (*PrinterOptionsResponse, er
 	}
 
 	resp := ParseLpoptionsOutput(name, out)
-	if path := FindPPDFile(name); path != "" {
-		if data, err := readLimited(path); err == nil {
-			ppd := ParsePPDSummary(data)
-			// Group by the PPD's own InstallableOptions group; the keyword
-			// guess in ParseLpoptionsOutput misses names such as OptTray2.
-			if ppd.HasInstallableGroup {
-				RegroupByInstallable(resp, ppd)
-			}
-			ApplyPPDChoiceLabels(resp, ppd)
+	// Same source as the accessories tab: the PPD file, or cupsd if the file
+	// can't be read by this user.
+	if data, err := (&cliAccessorySource{a: a}).QueuePPD(name); err == nil && len(data) > 0 {
+		ppd := ParsePPDSummary(data)
+		// Group by the PPD's own InstallableOptions group; the keyword
+		// guess in ParseLpoptionsOutput misses names such as OptTray2.
+		if ppd.HasInstallableGroup {
+			RegroupByInstallable(resp, ppd)
 		}
+		ApplyPPDChoiceLabels(resp, ppd)
 	}
 	return resp, nil
 }

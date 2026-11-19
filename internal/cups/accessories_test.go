@@ -38,6 +38,7 @@ const samplePPD = `*PPD-Adobe: "4.3"
 *OptTray2 False/Not Installed: ""
 *OptTray2 True/Installed: "
 *OptTray2 Bogus/Not a real choice: ""
+*OptTray2 Bogus2/Also not a choice: ""
 "
 *End
 *CloseUI: *OptTray2
@@ -828,6 +829,12 @@ func TestPPDChoiceLabels(t *testing.T) {
 			t.Errorf("%s = %q, want %q", k, labels[k], v)
 		}
 	}
+	// lpoptions reports a PPD choice named "Custom" as "_Custom".
+	custom := ParsePPDSummary([]byte("*PPD-Adobe: \"4.3\"\n*OpenUI *XRBookletSize/Booklet Size: PickOne\n*XRBookletSize Custom/Custom Size: \"\"\n*CloseUI: *XRBookletSize\n"))
+	if got := custom.ChoiceLabel("XRBookletSize", "_Custom"); got != "Custom Size" {
+		t.Errorf("_Custom label = %q", got)
+	}
+
 	// Legacy ISO-8859-1 labels become valid UTF-8.
 	latin := ParsePPDSummary([]byte("*PPD-Adobe: \"4.3\"\n*OpenUI *Q/Qualit\xe9: PickOne\n*Q Haute/Haute qualit\xe9: \"\"\n*CloseUI: *Q\n"))
 	if got := latin.ChoiceLabel("Q", "Haute"); got != "Haute qualité" {
@@ -883,6 +890,36 @@ Model:  name = everywhere
 		if got := driverNameFromLPInfo(out, mm); got != want {
 			t.Errorf("%q: got %q, want %q", mm, got, want)
 		}
+	}
+}
+
+func TestMockAdapterDeleteForgetsNotes(t *testing.T) {
+	m := NewMockAdapter()
+	add := func() {
+		t.Helper()
+		if err := m.AddPrinter(AddPrinterParams{Name: "Recreated", URI: "ipp://192.168.1.9/ipp/print", Model: "drv:///sample.drv/generic.ppd"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add()
+	rep, err := m.GetAccessories("Recreated")
+	if err != nil || !rep.Available || len(rep.Options) == 0 {
+		t.Fatalf("new mock queue: %+v %v", rep, err)
+	}
+	o := rep.Options[0]
+	other := o.Choices[0].Name
+	if other == o.Value {
+		other = o.Choices[1].Name
+	}
+	if _, err := m.SetAccessories("Recreated", map[string]string{o.Key: other}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.DeletePrinter("Recreated"); err != nil {
+		t.Fatal(err)
+	}
+	add()
+	if rep, _ := m.GetAccessories("Recreated"); rep.HasOverrides {
+		t.Error("re-created queue inherited the deleted queue's notes")
 	}
 }
 

@@ -36,8 +36,16 @@ type PPDSummary struct {
 }
 
 // ChoiceLabel returns the PPD's label for an option's choice, or "".
+// libcups (and so lpoptions) renames a PPD choice called "Custom" to
+// "_Custom", because "Custom" is reserved for typed-in values.
 func (s *PPDSummary) ChoiceLabel(key, choice string) string {
-	return s.ChoiceLabels[key][choice]
+	if l, ok := s.ChoiceLabels[key][choice]; ok {
+		return l
+	}
+	if choice == "_Custom" {
+		return s.ChoiceLabels[key]["Custom"]
+	}
+	return ""
 }
 
 // DriverNames returns the names CUPS may list this driver under (lpinfo
@@ -95,8 +103,9 @@ func ParsePPDSummary(data []byte) *PPDSummary {
 
 	for _, raw := range strings.Split(string(data), "\n") {
 		if inQuoted {
-			// A multi-line quoted value ends on the line holding the closing quote.
-			if strings.Contains(raw, "\"") {
+			// Like libcups, every '"' switches in or out of the quoted value, so
+			// a line with a balanced pair ("") stays inside it.
+			if strings.Count(raw, "\"")%2 == 1 {
 				inQuoted = false
 			}
 			continue

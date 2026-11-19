@@ -70,14 +70,26 @@ interface AccessoriesPanelProps {
   onChanged?: () => void;
   // Called with every report loaded or saved, so the parent can update the tab count.
   onReport?: (report: AccessoryReport) => void;
+  // A report the parent already loaded; when given, the panel doesn't fetch it again.
+  initialReport?: AccessoryReport | null;
 }
 
-export const AccessoriesPanel: React.FC<AccessoriesPanelProps> = ({ printerName, onChanged, onReport }) => {
-  const [report, setReport] = useState<AccessoryReport | null>(null);
-  const [loading, setLoading] = useState(true);
+function draftFrom(rep: AccessoryReport | null | undefined): Record<string, string> {
+  const values: Record<string, string> = {};
+  rep?.options.forEach((o) => {
+    values[o.key] = o.value;
+  });
+  return values;
+}
+
+export const AccessoriesPanel: React.FC<AccessoriesPanelProps> = ({ printerName, onChanged, onReport, initialReport }) => {
+  const [report, setReport] = useState<AccessoryReport | null>(initialReport ?? null);
+  const [loading, setLoading] = useState(!initialReport);
+  // Only the report given at mount counts; later ones come back from onReport.
+  const [hadInitialReport] = useState(Boolean(initialReport));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<Record<string, string>>(() => draftFrom(initialReport));
   const [editing, setEditing] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState<'save' | 'reset' | null>(null);
@@ -92,15 +104,12 @@ export const AccessoriesPanel: React.FC<AccessoriesPanelProps> = ({ printerName,
   const applyReport = useCallback((rep: AccessoryReport) => {
     setReport(rep);
     onReport?.(rep);
-    const values: Record<string, string> = {};
-    rep.options.forEach((o) => {
-      values[o.key] = o.value;
-    });
-    setDraft(values);
+    setDraft(draftFrom(rep));
   }, [onReport]);
 
   // The parent keys this component by queue name, so state starts fresh for each queue.
   useEffect(() => {
+    if (hadInitialReport) return;
     let cancelled = false;
     api
       .getAccessories(printerName)
@@ -116,7 +125,7 @@ export const AccessoriesPanel: React.FC<AccessoriesPanelProps> = ({ printerName,
     return () => {
       cancelled = true;
     };
-  }, [printerName, applyReport]);
+  }, [printerName, applyReport, hadInitialReport]);
 
   useEffect(() => {
     if (confirming && warningRef.current) {

@@ -804,6 +804,10 @@ func (m *MockAdapter) DeletePrinter(name string) error {
 		}
 	}
 
+	// Like the live adapter: a new queue with the same name must not inherit
+	// manual accessory notes (mock queue UUIDs are derived from the name).
+	_ = m.accessories().ForgetQueue(name)
+
 	return nil
 }
 
