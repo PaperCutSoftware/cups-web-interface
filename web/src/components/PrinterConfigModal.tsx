@@ -22,9 +22,12 @@ import type {
   DriverInfo,
   PPDValidationResult,
   ModifyPrinterParams,
+  AccessoryReport,
 } from '../types/cups';
 import { api } from '../api/client';
 import { useModalDialog } from '../utils/useModalDialog';
+import { AccessoriesPanel } from './AccessoriesPanel';
+import { installedCount } from '../utils/accessories';
 
 export type ConfigModalTab = 'preferences' | 'accessories' | 'audit' | 'details' | 'driver';
 
@@ -48,6 +51,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [options, setOptions] = useState<PrinterOptionsResponse | null>(null);
   const [audit, setAudit] = useState<ArchAuditResult | null>(null);
+  const [accessoryReport, setAccessoryReport] = useState<AccessoryReport | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
+    setAccessoryReport(null);
 
     // Seed queue details
     setDetailsURI(printer.uri || '');
@@ -98,8 +103,13 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
         console.error('Failed to load printer audit:', err);
         return null;
       }),
+      api.getAccessories(printer.name).catch((err) => {
+        console.error('Failed to load accessories:', err);
+        return null;
+      }),
     ])
-      .then(([optsData, auditData]) => {
+      .then(([optsData, auditData, accessoryData]) => {
+        setAccessoryReport(accessoryData);
         if (optsData) {
           setOptions(optsData);
           const initialValues: Record<string, string> = {};
@@ -157,7 +167,13 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
     setSuccessMessage(null);
 
     try {
-      await api.setPrinterOptions(printer.name, formValues);
+      // Only general options: installable options are hardware settings saved
+      // (with a warning and provenance) in the Hardware Accessories tab.
+      const generalValues: Record<string, string> = {};
+      options?.general.forEach((opt) => {
+        if (formValues[opt.key] !== undefined) generalValues[opt.key] = formValues[opt.key];
+      });
+      await api.setPrinterOptions(printer.name, generalValues);
       setSuccessMessage('Printer options saved successfully!');
       if (onSaveSuccess) onSaveSuccess();
       setTimeout(() => setSuccessMessage(null), 3500);
@@ -321,9 +337,12 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
           >
             <Box className={`w-3.5 h-3.5 ${activeTab === 'accessories' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} aria-hidden="true" />
             <span>Hardware Accessories</span>
-            {options?.accessories && options.accessories.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-xs font-bold bg-blue-100 dark:bg-slate-700 text-blue-800 dark:text-white border border-blue-200 dark:border-slate-600">
-                {options.accessories.length}
+            {installedCount(accessoryReport) !== null && (
+              <span
+                title={`${installedCount(accessoryReport)} of ${accessoryReport?.options.length} accessories installed`}
+                className="ml-1 px-1.5 py-0.2 rounded-full text-xs font-bold bg-blue-100 dark:bg-slate-700 text-blue-800 dark:text-white border border-blue-200 dark:border-slate-600"
+              >
+                {installedCount(accessoryReport)}
               </span>
             )}
           </button>
@@ -462,50 +481,13 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               )}
             </div>
           ) : activeTab === 'accessories' ? (
-            /* Tab 2: Hardware Accessories */
-            <div className="space-y-5">
-              {options?.accessories && options.accessories.length > 0 ? (
-                options.accessories.map((opt) => {
-                  const currentValue = formValues[opt.key] || opt.default_value;
-                  const selectId = `acc-opt-${opt.key}`;
-                  return (
-                    <div
-                      key={opt.key}
-                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <label
-                          htmlFor={selectId}
-                          className="text-xs font-semibold text-slate-800 dark:text-slate-200"
-                        >
-                          {opt.display_name}
-                        </label>
-                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                          {opt.key}
-                        </span>
-                      </div>
-
-                      <select
-                        id={selectId}
-                        value={currentValue}
-                        onChange={(e) => handleValueChange(opt.key, e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {opt.choices.map((choice) => (
-                          <option key={choice.name} value={choice.name}>
-                            {choice.label} {choice.name === opt.default_value ? '(Default)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-xs">
-                  No installable hardware accessories (trays, finishers) declared in this printer's PPD.
-                </div>
-              )}
-            </div>
+            /* Tab 2: Hardware Accessories (installable options) */
+            <AccessoriesPanel
+              key={printer.name}
+              printerName={printer.name}
+              onChanged={onSaveSuccess}
+              onReport={setAccessoryReport}
+            />
           ) : activeTab === 'details' ? (
             /* Tab 3: Queue Details */
             <div className="space-y-4">
@@ -906,7 +888,11 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            {activeTab === 'audit' ? 'Audit verified via debug/macho' : 'Changes apply immediately to CUPS queue'}
+            {activeTab === 'audit'
+              ? 'Audit verified via debug/macho'
+              : activeTab === 'accessories'
+                ? 'Installable options are read from the queue PPD in CUPS'
+                : 'Changes apply immediately to CUPS queue'}
           </span>
 
           <div className="flex items-center space-x-2.5">
@@ -939,7 +925,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 <span>Apply Driver Swap</span>
               </button>
             )}
-            {(activeTab === 'preferences' || activeTab === 'accessories') && (
+            {activeTab === 'preferences' && (
               <button
                 type="button"
                 onClick={handleSaveOptions}
@@ -947,7 +933,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition shadow-xs cursor-pointer"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                <span>Save {activeTab === 'preferences' ? 'Default Options' : 'Accessories'}</span>
+                <span>Save Default Options</span>
               </button>
             )}
           </div>

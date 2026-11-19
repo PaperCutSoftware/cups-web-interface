@@ -75,6 +75,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/jobs/{id}/restart", s.handleRestartJob)
 	s.mux.HandleFunc("GET /api/v1/printers/{name}/options", s.handleGetPrinterOptions)
 	s.mux.HandleFunc("PUT /api/v1/printers/{name}/options", s.handleSetPrinterOptions)
+	s.mux.HandleFunc("GET /api/v1/printers/{name}/accessories", s.handleGetAccessories)
+	s.mux.HandleFunc("PUT /api/v1/printers/{name}/accessories", s.handleSetAccessories)
+	s.mux.HandleFunc("POST /api/v1/printers/{name}/accessories/reset", s.handleResetAccessories)
+	// POST: it makes the server contact the device, so it needs the session token.
+	s.mux.HandleFunc("POST /api/v1/printers/{name}/accessories/suggestions", s.handleSuggestAccessories)
 	s.mux.HandleFunc("GET /api/v1/printers/{name}/audit", s.handleGetPrinterAudit)
 	s.mux.HandleFunc("GET /api/v1/audit/summary", s.handleGetFleetAudit)
 	s.mux.HandleFunc("GET /api/v1/drivers", s.handleGetDrivers)

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -41,6 +42,11 @@ type CLIAdapter struct {
 	// ListenPort is the port this server runs on. A LaunchAgent installed from
 	// the web interface is registered on the same port. Zero means 6310.
 	ListenPort int
+
+	// Accessories handles manually set installable options. Created on first
+	// use when nil; tests can set their own.
+	Accessories *AccessoryManager
+	accOnce     sync.Once
 }
 
 // NewCLIAdapter creates a new CLI-based CUPS adapter.
@@ -347,6 +353,8 @@ func (a *CLIAdapter) DeletePrinter(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete printer %s: %w", name, err)
 	}
+	// A new queue with the same name must not inherit manual accessory settings.
+	_ = a.accessories().ForgetQueue(name)
 	return nil
 }
 
@@ -469,7 +477,34 @@ func (a *CLIAdapter) GetPrinterOptions(name string) (*PrinterOptionsResponse, er
 		return nil, fmt.Errorf("failed to retrieve options for printer %s: %w", name, err)
 	}
 
-	return ParseLpoptionsOutput(name, out), nil
+	resp := ParseLpoptionsOutput(name, out)
+	// Group by the PPD's own InstallableOptions group when the PPD can be read;
+	// the keyword guess in ParseLpoptionsOutput misses names such as OptTray2.
+	if path := FindPPDFile(name); path != "" {
+		if data, err := readLimited(path); err == nil {
+			if ppd := ParsePPDSummary(data); ppd.HasInstallableGroup {
+				RegroupByInstallable(resp, ppd)
+			}
+		}
+	}
+	return resp, nil
+}
+
+// RegroupByInstallable puts exactly the options in the PPD's InstallableOptions
+// group under Accessories and everything else under General.
+func RegroupByInstallable(resp *PrinterOptionsResponse, ppd *PPDSummary) {
+	all := append(append([]PrinterOption{}, resp.General...), resp.Accessories...)
+	resp.General = []PrinterOption{}
+	resp.Accessories = []PrinterOption{}
+	for _, opt := range all {
+		if ppd.Option(opt.Key) != nil {
+			opt.Group = "accessories"
+			resp.Accessories = append(resp.Accessories, opt)
+		} else {
+			opt.Group = "general"
+			resp.General = append(resp.General, opt)
+		}
+	}
 }
 
 // SetPrinterOptions writes updated options via `lpoptions -p <name> -o <k>=<v> ...`.
@@ -769,6 +804,12 @@ func (a *CLIAdapter) SetPrinterDriver(name string, modelOrPPD string) error {
 
 	if _, err := a.runCommand(ctx, "lpadmin", args...); err != nil {
 		return fmt.Errorf("failed to update printer driver: %w", err)
+	}
+
+	// A new PPD starts from the driver defaults. Keep the admin's manual
+	// accessory settings (they are only dropped by "Reset to detected values").
+	if err := a.accessories().ReapplyOverrides(name); err != nil {
+		return fmt.Errorf("driver updated, but manual accessory settings could not be re-applied: %w", err)
 	}
 
 	return nil

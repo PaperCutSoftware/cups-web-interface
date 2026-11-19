@@ -21,6 +21,10 @@ type MockAdapter struct {
 	mockDrivers          []DriverInfo
 	launchAgentInstalled bool
 	logs                 []LogEntry
+
+	// Accessories handles manually set installable options (in memory).
+	Accessories *AccessoryManager
+	accOnce     sync.Once
 }
 
 // NewMockAdapter initializes a mock adapter populated with realistic test data.

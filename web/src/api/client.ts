@@ -3,6 +3,8 @@ import type {
   Job,
   SystemStatus,
   PrinterOptionsResponse,
+  AccessoryReport,
+  AccessorySuggestions,
   ArchAuditResult,
   FleetAuditSummary,
   AddPrinterParams,
@@ -229,6 +231,40 @@ export const api = {
       body: JSON.stringify({ options }),
     });
     return handleResponse<void>(res);
+  },
+
+  async getAccessories(name: string): Promise<AccessoryReport> {
+    const res = await apiFetch(`${API_BASE}/printers/${encodeURIComponent(name)}/accessories`);
+    return handleResponse<AccessoryReport>(res);
+  },
+
+  // acknowledgedWarning must be true: the UI showed the "can't be checked" warning.
+  async setAccessories(
+    name: string,
+    values: Record<string, string>,
+    acknowledgedWarning: boolean,
+  ): Promise<AccessoryReport> {
+    const res = await apiFetch(`${API_BASE}/printers/${encodeURIComponent(name)}/accessories`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values, acknowledged_warning: acknowledgedWarning }),
+    });
+    return handleResponse<AccessoryReport>(res);
+  },
+
+  async resetAccessories(name: string): Promise<AccessoryReport> {
+    const res = await apiFetch(`${API_BASE}/printers/${encodeURIComponent(name)}/accessories/reset`, {
+      method: 'POST',
+    });
+    return handleResponse<AccessoryReport>(res);
+  },
+
+  async suggestAccessories(name: string): Promise<AccessorySuggestions> {
+    // POST: the server contacts the device, so this needs the session token.
+    const res = await apiFetch(`${API_BASE}/printers/${encodeURIComponent(name)}/accessories/suggestions`, {
+      method: 'POST',
+    });
+    return handleResponse<AccessorySuggestions>(res);
   },
 
   async getPrinterAudit(name: string): Promise<ArchAuditResult> {

@@ -224,4 +224,10 @@ type Adapter interface {
 	GetLogs(lines int, level string) ([]LogEntry, error)
 	GetLaunchAgentStatus() (*LaunchAgentStatus, error)
 	ManageLaunchAgent(action string) error
+
+	// Manually set installable options (accessories).
+	GetAccessories(name string) (*AccessoryReport, error)
+	SetAccessories(name string, values map[string]string, acknowledged bool) (*AccessoryReport, error)
+	ResetAccessories(name string) (*AccessoryReport, error)
+	SuggestAccessories(name string) (*AccessorySuggestions, error)
 }
