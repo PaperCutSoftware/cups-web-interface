@@ -17,7 +17,7 @@ Include the affected version or commit, steps to reproduce, and the impact you o
 * **Loopback Binding by Default:** The HTTP server binds to `127.0.0.1` by default and is intended to be used on the loopback interface only. Binding it to another interface with `-host` is not a supported configuration.
 * **DNS Rebinding Protection:** Every incoming HTTP request must supply a valid loopback `Host` header (`127.0.0.1`, `localhost`, or `[::1]`). Requests routed via external hostnames or DNS rebinding domains are terminated with `400 Bad Request`.
 * **CSRF & Cross-Site Defense:** 
-  * State-modifying requests (`POST`, `PUT`, `DELETE`) inspect modern browser metadata (`Sec-Fetch-Site`) and block all cross-site requests with `403 Forbidden`.
+  * Every API request (reads as well as `POST`, `PUT`, `DELETE`) is checked against browser metadata (`Sec-Fetch-Site`). Requests a browser marks as coming from another site, or from another `localhost` port, are refused with `403 Forbidden`, so other web pages can't make the server run CUPS commands. Clients that don't send the header (curl, scripts) are handled by the token and connection-owner rules.
   * Origin headers must match the exact address the interface is served on (same host and port). Pages on other loopback ports are treated as cross-origin: they receive no CORS access and cannot obtain the session token.
 * **CORS Lockdown on Event Streams:** Server-Sent Events (`/api/v1/events`) do not permit wildcard or cross-origin access, preventing malicious third-party websites from eavesdropping on print jobs, document titles, or queue state.
 

@@ -97,6 +97,63 @@ export interface PrinterOptionsResponse {
   accessories: PrinterOption[];
 }
 
+export type AccessorySource = 'manual' | 'detected' | 'driver_default' | 'unknown';
+
+export interface AccessoryOverride {
+  queue: string;
+  option: string;
+  value: string;
+  previous_value: string;
+  set_by: string;
+  set_at: string;
+}
+
+export interface AccessoryOption {
+  key: string;
+  label: string;
+  choices: OptionChoice[];
+  value: string;
+  driver_default: string;
+  source: AccessorySource;
+  override?: AccessoryOverride;
+  override_replaced: boolean;
+}
+
+export interface AccessoryReport {
+  printer_name: string;
+  available: boolean;
+  unavailable_reason?: 'no_ppd' | 'driverless' | 'no_installable_options' | string;
+  is_admin: boolean;
+  driver_model: string;
+  driver_ppd?: string;
+  driver_defaults_known: boolean;
+  device_uri: string;
+  direct_connection: boolean;
+  connection_note: string;
+  has_overrides: boolean;
+  options: AccessoryOption[];
+  // The app's notes file can't be used; values still come from CUPS, changes are refused.
+  history_error?: string;
+  // Notes recorded for an earlier queue with the same name, now ignored.
+  ignored_notes?: number;
+  // CUPS was changed but the notes couldn't be saved.
+  warning?: string;
+}
+
+export interface AccessorySuggestion {
+  key: string;
+  label: string;
+  value: string;
+  evidence: string;
+}
+
+export interface AccessorySuggestions {
+  printer_name: string;
+  queried: boolean;
+  note?: string;
+  suggestions: AccessorySuggestion[];
+}
+
 export interface BinaryInfo {
   path: string;
   name: string;
