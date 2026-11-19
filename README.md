@@ -24,10 +24,12 @@ Start the server and automatically open the interface in your browser:
 ```
 The interface will be available at `http://127.0.0.1:6310`. Once the server is running, you can open (or bookmark) that address directly; no login step is needed for the user account that runs the server. Other accounts on the same Mac are not signed in.
 
-### 2. Run as a macOS Background Service (LaunchAgent)
-To have the interface start automatically in the background on login:
+This runs until you close the Terminal window. To keep it running and start it at every login, see step 2.
+
+### 2. Start Automatically at Login (Recommended)
+Running the install command is all you need. It sets up cups-webui as a background service (a macOS LaunchAgent) that starts every time you log in and restarts if it stops. You don't need to enable anything else in the web interface.
 ```bash
-# Install the service and start it immediately
+# Install the service: it starts now and at every login
 ./bin/cups-webui launchagent install
 
 # Or install it on a different port
@@ -36,11 +38,15 @@ To have the interface start automatically in the background on login:
 # Check service status
 ./bin/cups-webui launchagent status
 
-# Uninstall the service
+# Remove the service (it stops and no longer starts at login)
 ./bin/cups-webui launchagent uninstall
 ```
 
-The install command copies the binary to `~/Library/Application Support/cups-webui/` and starts the service straight away. Open `http://127.0.0.1:6310` in your browser and bookmark it (or the port you chose with `-port`). Installing the service from the web interface uses the port that instance is running on.
+The install command copies the binary to `~/Library/Application Support/cups-webui/` and starts the service straight away. Open `http://127.0.0.1:6310` in your browser and bookmark it (or the port you chose with `-port`).
+
+**Enable Auto-Start** under **CUPS Settings** in the web interface does the same thing, so use whichever is easier. It uses the port that instance is running on. Running `./bin/cups-webui -open` on its own (step 1) does not start it at login.
+
+The service starts when you log in, not when the Mac boots, and only for your user account.
 
 ### 3. Run in Mock Mode (For Testing / Demo)
 Runs with simulated printers, queues, and diagnostic alerts without requiring active printer hardware:
